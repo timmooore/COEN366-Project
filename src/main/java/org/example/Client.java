@@ -1,35 +1,46 @@
 package org.example;
-import java.io.BufferedReader;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
 
-public class Client {
+public class Client implements Runnable {
      public static final String SERVER_IP = "localhost";
-    public static final int SERVER_PORT = 12345;
+    public static final int SERVER_PORT = 3000;
     public static final long EXCHANGE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    private static final int BUFFER_SIZE = 1024;
 
-    public static void main(String[] args){
-         try {
-            try (Socket socket = new Socket(SERVER_IP, SERVER_PORT)) {
-                System.out.println("Connected to server.");
+    public void run() {
+        // Open client DatagramSocket on any available port
+        try (DatagramSocket socket = new DatagramSocket()) {
+            System.out.println("Connected to server.");
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-       
-      while (true) {
-                    out.println("ping");
-                    System.out.println("Sent ping");
-                    String response = in.readLine();
-                    System.out.println("Received: " + response);
-                    Thread.sleep(1000); // Wait for a second before sending the next ping
-                }
-            }
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            // ChatGPT example
+            String message = "Hello, server!";
+            byte[] sendData = message.getBytes();
+            InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
+
+            // Create packet to send to server
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+
+            // Send packet to server
+            socket.send(sendPacket);
+            System.out.println("Message sent to server.");
+
+            // Receive response from server
+            byte[] receiveData = new byte[BUFFER_SIZE];
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
+            // Wait for response packet from server
+            socket.receive(receivePacket);
+
+            // Process response
+            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Received from server: " + receivedMessage);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        
     }
 }
