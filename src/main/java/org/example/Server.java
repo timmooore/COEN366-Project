@@ -8,7 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server {
-    private DatagramSocket socket;
+    private final DatagramSocket socket;
     private boolean running;
     private final int bufferSize = 1024; 
     private final Logger logger = Logger.getLogger(Server.class.getName());
@@ -31,7 +31,7 @@ public class Server {
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             try {
                 socket.receive(packet);
-               
+
                 new Thread(() -> handlePacket(packet)).start();
             } catch (IOException e) {
                 logger.log(Level.SEVERE, "IOException: ", e);
@@ -43,10 +43,23 @@ public class Server {
     }
 
     private void handlePacket(DatagramPacket packet) {
-        String received = new String(packet.getData(), 0, packet.getLength());
-        logger.info("Received: " + received);
+        byte[] dataReceived = packet.getData();
+        try {
+            Message regReceived = Message.deserialize(dataReceived);
 
-        // Implement protocol logic here (e.g., REGISTER, PUBLISH, etc.)
+            // String received = new String(packet.getData(), 0, packet.getLength());
+            // logger.info("Received: " + received);
+            assert regReceived != null;
+            logger.info("Received: Code: " + regReceived.getCode() +
+                    ", RQ#: " + regReceived.getReqNo() +
+                    ", Name: " + regReceived.getName() +
+                    ", IP address: " + regReceived.getIpAddress().toString() +
+                    ", UDP port: " + regReceived.getUdpPort());
+
+            // Implement protocol logic here (e.g., REGISTER, PUBLISH, etc.)
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // Example response
         String responseStr = "ACK"; 

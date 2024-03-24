@@ -9,7 +9,7 @@ import java.net.InetAddress;
 public class Client implements Runnable {
      public static final String SERVER_IP = "localhost";
     public static final int SERVER_PORT = 3000;
-    public static final long EXCHANGE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    // public static final long EXCHANGE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
     private static final int BUFFER_SIZE = 1024;
 
     public void run() {
@@ -18,9 +18,12 @@ public class Client implements Runnable {
             System.out.println("Connected to server.");
 
             // ChatGPT example
-            String message = "Hello, server!";
-            byte[] sendData = message.getBytes();
+            // String message = "Hello, server!";
             InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
+            Message register = new Message(Message.REGISTER, 123, "Tim", serverAddress, SERVER_PORT);
+            byte[] sendData = register.serialize();
+
+
 
             // Create packet to send to server
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
