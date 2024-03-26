@@ -1,44 +1,19 @@
 package org.example;
 
 import java.io.*;
-import java.net.InetAddress;
 
 public class Message implements Serializable {
-    public static final int REGISTER = 1;
-    private static final int REGISTERED = 2;
-    private final int code;
-    private final int reqNo;
-    private final String name;
-    private final InetAddress ipAddress;
-    private final int udpPort;
+    private final Code code;
 
-    public Message(int code, int reqNo, String name, InetAddress ipAddress, int udpPort) {
+    public Message(Code code) {
         this.code = code;
-        this.reqNo = reqNo;
-        this.name = name;
-        this.ipAddress = ipAddress;
-        this.udpPort = udpPort;
     }
 
-    public int getCode() {
+    public Code getCode() {
         return code;
     }
 
-    public int getReqNo() {
-        return reqNo;
-    }
 
-    public String getName() {
-        return name;
-    }
-
-    public InetAddress getIpAddress() {
-        return ipAddress;
-    }
-
-    public int getUdpPort() {
-        return udpPort;
-    }
 
     public byte[] serialize() {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -65,3 +40,4 @@ public class Message implements Serializable {
         }
     }
 }
+

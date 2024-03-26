@@ -20,10 +20,8 @@ public class Client implements Runnable {
             // ChatGPT example
             // String message = "Hello, server!";
             InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
-            Message register = new Message(Message.REGISTER, 123, "Tim", serverAddress, SERVER_PORT);
+            RegisterMessage register = new RegisterMessage(123, "Tim", serverAddress, SERVER_PORT);
             byte[] sendData = register.serialize();
-
-
 
             // Create packet to send to server
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
@@ -39,9 +37,11 @@ public class Client implements Runnable {
             // Wait for response packet from server
             socket.receive(receivePacket);
 
-            // Process response
-            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            System.out.println("Received from server: " + receivedMessage);
+            RegisteredMessage rm = (RegisteredMessage) Message.deserialize(receivePacket.getData());
+            System.out.println("Received from server: Code: " + rm.getCode() + ", REQ#: " + rm.getReqNo());
+//            // Process response
+//            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
+//            System.out.println("Received from server: " + receivedMessage);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
