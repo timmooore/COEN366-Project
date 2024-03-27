@@ -11,6 +11,7 @@ public class Client implements Runnable {
     public static final int SERVER_PORT = 3000;
     // public static final long EXCHANGE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
     private static final int BUFFER_SIZE = 1024;
+    private int reqNo = 1;  // REQ# numbers the requests of each Client
 
     public void run() {
         // Open client DatagramSocket on any available port
