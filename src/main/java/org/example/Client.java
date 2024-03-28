@@ -65,6 +65,16 @@ public class Client {
                                 + ", REQ#: " + rdm.getReqNo()
                                 + ", Reason: " + rdm.getReason());
                     }
+                } else if (code == Code.DE_REGISTER) {
+                    DeRegisterMessage deRegister = new DeRegisterMessage(reqNo, "Client1");
+                    byte[] sendData = deRegister.serialize();
+
+                    // Create packet to send to server
+                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+
+                    // Send packet to server
+                    socket.send(sendPacket);
+                    System.out.println("Message sent to server by client " + Thread.currentThread().getName());
                 }
 
 //            // Process response
@@ -85,9 +95,14 @@ public class Client {
             new Thread(new ClientTask(reqNo, code)).start();
             ++reqNo;
         }
-
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
+        ++reqNo;
 
         // TODO: Implement some sort of input CLI to choose messages
-
     }
 }

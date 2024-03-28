@@ -72,6 +72,16 @@ public class Server {
                 response = new RegisteredMessage(rm.getReqNo());
                 sendResponse(packet, response);
             }
+        } else if (receivedMessage.getCode() == Code.DE_REGISTER) {
+            DeRegisterMessage drm = (DeRegisterMessage) receivedMessage;
+            logger.info("Received: Code: " + receivedMessage.getCode() +
+                    ", RQ#: " + drm.getReqNo() +
+                    ", Name: " + drm.getName());
+            clientNames.remove(drm.getName());
+            StringBuilder msg = new StringBuilder(drm.getName() + " removed. Remaining clients: ");
+            for (String name : clientNames) msg.append(name).append(" ");
+            logger.info(msg.toString());
+
         }
     }
 
