@@ -6,45 +6,65 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 
-public class Client implements Runnable {
+public class Client {
      public static final String SERVER_IP = "localhost";
     public static final int SERVER_PORT = 3000;
     // public static final long EXCHANGE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
     private static final int BUFFER_SIZE = 1024;
     private int reqNo = 1;  // REQ# numbers the requests of each Client
 
-    public void run() {
-        // Open client DatagramSocket on any available port
-        try (DatagramSocket socket = new DatagramSocket()) {
-            System.out.println("Connected to server.");
+    public static void main(String[] args) {
+        int reqNo = 1;
+        // Number of clients to run
+        int numClients = 5;
 
-            // ChatGPT example
-            // String message = "Hello, server!";
-            InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
-            RegisterMessage register = new RegisterMessage(123, "Tim", serverAddress, SERVER_PORT);
-            byte[] sendData = register.serialize();
+        for (int i = 0; i < 1; i++) {
+            new Thread(new ClientTask(reqNo)).start();
+            ++reqNo;
+        }
 
-            // Create packet to send to server
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+        // TODO: Implement some sort of input CLI to choose messages
 
-            // Send packet to server
-            socket.send(sendPacket);
-            System.out.println("Message sent to server.");
+    }
 
-            // Receive response from server
-            byte[] receiveData = new byte[BUFFER_SIZE];
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+    private static class ClientTask implements Runnable {
+        private int reqNo; // Request number for this instance of ClientTask
 
-            // Wait for response packet from server
-            socket.receive(receivePacket);
+        public ClientTask(int reqNo) {
+            this.reqNo = reqNo;
+        }
+        @Override
+        public void run() {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
 
-            RegisteredMessage rm = (RegisteredMessage) Message.deserialize(receivePacket.getData());
-            System.out.println("Received from server: Code: " + rm.getCode() + ", REQ#: " + rm.getReqNo());
+                // Create a register message for each client
+                RegisterMessage register = new RegisterMessage(reqNo++, "Client", serverAddress, SERVER_PORT);
+                byte[] sendData = register.serialize();
+
+                // Create packet to send to server
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+
+                // Send packet to server
+                socket.send(sendPacket);
+                System.out.println("Message sent to server by client " + Thread.currentThread().getName());
+
+                // Receive response from server
+                byte[] receiveData = new byte[BUFFER_SIZE];
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
+                // Wait for response packet from server
+                socket.receive(receivePacket);
+
+                // Deserialize the received data into a RegisteredMessage
+                RegisteredMessage receivedMessage = (RegisteredMessage) Message.deserialize(receivePacket.getData());
+                System.out.println("Received from server by client " + Thread.currentThread().getName() + ": Code: " + receivedMessage.getCode() + ", REQ#: " + receivedMessage.getReqNo());
 //            // Process response
 //            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
 //            System.out.println("Received from server: " + receivedMessage);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
