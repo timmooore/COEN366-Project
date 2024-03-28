@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -12,6 +14,7 @@ public class Server {
     private boolean running;
     private static final int BUFFER_SIZE = 1024;
     private final Logger logger = Logger.getLogger(Server.class.getName());
+    private final Set<String> clientNames = new HashSet<>();
 
     public Server(int port) {
         try {
@@ -49,6 +52,10 @@ public class Server {
         byte[] dataReceived = packet.getData();
         Message receivedMessage = Message.deserialize(dataReceived);
         assert receivedMessage != null;  // TODO: Might want this to be an if, needs testing
+
+        Message response;
+
+        // TODO: Implement protocol logic here (e.g., REGISTER, PUBLISH, etc.)
         if (receivedMessage.getCode() == Code.REGISTER) {
             RegisterMessage rm = (RegisterMessage) receivedMessage;
             logger.info("Received: Code: " + receivedMessage.getCode() +
@@ -56,25 +63,27 @@ public class Server {
                     ", Name: " + rm.getName() +
                     ", IP address: " + rm.getIpAddress().toString() +
                     ", UDP port: " + rm.getUdpPort());
-
-            // TODO: Implement protocol logic here (e.g., REGISTER, PUBLISH, etc.)
-            Message response;
-            response = new RegisteredMessage(rm.getReqNo());
-            byte[] responseData = response.serialize();
-            DatagramPacket responsePacket = new DatagramPacket(responseData, responseData.length, packet.getAddress(), packet.getPort());
-            try {
-                socket.send(responsePacket);
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Failed to send response: ", e);
+            if (clientNames.contains(rm.getName())) {
+                // Deny registration
+                response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
+                sendResponse(packet, response);
+            } else {
+                clientNames.add(rm.getName());
+                response = new RegisteredMessage(rm.getReqNo());
+                sendResponse(packet, response);
             }
         }
-        // Example response
-//        String responseStr = "ACK";
-//        byte[] responseData = responseStr.getBytes();
-//        DatagramPacket responsePacket = new DatagramPacket(responseData, responseData.length, packet.getAddress(), packet.getPort());
+    }
 
-
-
+    private void sendResponse(DatagramPacket packet, Message response) {
+        byte[] responseData = response.serialize();
+        DatagramPacket responsePacket = new DatagramPacket(responseData,
+                responseData.length, packet.getAddress(), packet.getPort());
+        try {
+            socket.send(responsePacket);
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to send response: ", e);
+        }
     }
 
     public void stop() {
