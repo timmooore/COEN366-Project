@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.List;
 
 
 public class Client {
@@ -14,6 +15,15 @@ public class Client {
     private static class ClientTask implements Runnable {
         private int reqNo; // Request number for this instance of ClientTask
         private final Code code;
+        private List<String> filesToPublish; // Only used for PUBLISH
+
+        // Overloaded constructor for PUBLISH with files list
+         public ClientTask(int reqNo, Code code, List<String> filesToPublish) {
+            this.reqNo = reqNo;
+            this.code = code;
+            this.filesToPublish = filesToPublish;
+        }
+
 
         // TODO: Modify so that we can pass different messages to the CLientTask
         public ClientTask(int reqNo, Code code) {

@@ -4,17 +4,20 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server {
+
     private final DatagramSocket socket;
     private boolean running;
     private static final int BUFFER_SIZE = 1024;
     private final Logger logger = Logger.getLogger(Server.class.getName());
     private final Set<String> clientNames = new HashSet<>();
+    private final HashMap<String, Set<String>> clientFiles = new HashMap<>(); // Store client files
 
     public Server(int port) {
         try {
@@ -46,45 +49,64 @@ public class Server {
     }
 
     private void handlePacket(DatagramPacket packet) {
-        // String received = new String(packet.getData(), 0, packet.getLength());
-        // logger.info("Received: " + received);
-
         byte[] dataReceived = packet.getData();
         Message receivedMessage = Message.deserialize(dataReceived);
-        assert receivedMessage != null;  // TODO: Might want this to be an if, needs testing
-
-        Message response;
-
-        // TODO: Implement protocol logic here (e.g., REGISTER, PUBLISH, etc.)
-        if (receivedMessage.getCode() == Code.REGISTER) {
-            RegisterMessage rm = (RegisterMessage) receivedMessage;
-            logger.info("Received: Code: " + receivedMessage.getCode() +
-                    ", RQ#: " + rm.getReqNo() +
-                    ", Name: " + rm.getName() +
-                    ", IP address: " + rm.getIpAddress().toString() +
-                    ", UDP port: " + rm.getUdpPort());
-            if (clientNames.contains(rm.getName())) {
-                // Deny registration
-                response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
-                sendResponse(packet, response);
-            } else {
-                clientNames.add(rm.getName());
-                response = new RegisteredMessage(rm.getReqNo());
-                sendResponse(packet, response);
+    
+        if (receivedMessage != null) {
+            switch (receivedMessage.getCode()) {
+                case REGISTER: {
+                    RegisterMessage rm = (RegisterMessage) receivedMessage;
+                    logger.info("Received: Code: " + receivedMessage.getCode() +
+                            ", RQ#: " + rm.getReqNo() +
+                            ", Name: " + rm.getName() +
+                            ", IP address: " + rm.getIpAddress().toString() +
+                            ", UDP port: " + rm.getUdpPort());
+                    if (clientNames.contains(rm.getName())) {
+                        // Deny registration
+                        PublishDeniedMessage response = new PublishDeniedMessage(rm.getReqNo(), "Name exists");
+                        sendResponse(packet, response);
+                    } else {
+                        clientNames.add(rm.getName());
+                        PublishedMessage response = new PublishedMessage(rm.getReqNo());
+                        sendResponse(packet, response);
+                    }
+                    break;
+                }
+                case DE_REGISTER: {
+                    DeRegisterMessage drm = (DeRegisterMessage) receivedMessage;
+                    logger.info("Received: Code: " + receivedMessage.getCode() +
+                            ", RQ#: " + drm.getReqNo() +
+                            ", Name: " + drm.getName());
+                    clientNames.remove(drm.getName());
+                    StringBuilder msg = new StringBuilder(drm.getName() + " removed. Remaining clients: ");
+                    for (String name : clientNames) msg.append(name).append(" ");
+                    logger.info(msg.toString());
+                    break;
+                }
+                case PUBLISH:
+                    handlePublish((PublishMessage) receivedMessage, packet);
+                    break;
+                // Add cases for other message types as needed
             }
-        } else if (receivedMessage.getCode() == Code.DE_REGISTER) {
-            DeRegisterMessage drm = (DeRegisterMessage) receivedMessage;
-            logger.info("Received: Code: " + receivedMessage.getCode() +
-                    ", RQ#: " + drm.getReqNo() +
-                    ", Name: " + drm.getName());
-            clientNames.remove(drm.getName());
-            StringBuilder msg = new StringBuilder(drm.getName() + " removed. Remaining clients: ");
-            for (String name : clientNames) msg.append(name).append(" ");
-            logger.info(msg.toString());
-
         }
     }
-
+    
+    private void handlePublish(PublishMessage pm, DatagramPacket packet) {
+        if (clientNames.contains(pm.getName())) {
+            // Client is registered, update file list
+            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
+            clientFiles.get(pm.getName()).addAll(pm.getFiles());
+    
+            // Send PUBLISHED message
+            PublishedMessage response = new PublishedMessage(pm.getReqNo());
+            sendResponse(packet, response);
+        } else {
+            // Client not registered, send PUBLISH-DENIED
+            PublishDeniedMessage response = new PublishDeniedMessage(pm.getReqNo(), "Client not registered");
+            sendResponse(packet, response);
+        }
+    }
+    
     private void sendResponse(DatagramPacket packet, Message response) {
         byte[] responseData = response.serialize();
         DatagramPacket responsePacket = new DatagramPacket(responseData,
