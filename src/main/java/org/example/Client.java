@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -17,79 +18,73 @@ public class Client {
         private final Code code;
         private List<String> filesToPublish; // Only used for PUBLISH
 
-        // Overloaded constructor for PUBLISH with files list
-         public ClientTask(int reqNo, Code code, List<String> filesToPublish) {
-            this.reqNo = reqNo;
-            this.code = code;
-            this.filesToPublish = filesToPublish;
-        }
-
-
-        // TODO: Modify so that we can pass different messages to the CLientTask
+        // Constructor for REGISTER and DE_REGISTER
         public ClientTask(int reqNo, Code code) {
             this.reqNo = reqNo;
             this.code = code;
+            this.filesToPublish = null; // Not used for REGISTER/DE_REGISTER
+        }
+
+        // Overloaded constructor for PUBLISH with a list of files
+        public ClientTask(int reqNo, Code code, List<String> filesToPublish) {
+            this.reqNo = reqNo;
+            this.code = code;
+            this.filesToPublish = filesToPublish;
         }
 
         @Override
         public void run() {
             try (DatagramSocket socket = new DatagramSocket()) {
                 InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
-                if (code == Code.REGISTER) {
-                    ///////////////////////////////////////////////
-                    // TODO: Testing. Remove
-                    String name = "Client" + reqNo;
-                    if (reqNo == 3) name = "Client" + 2;
-                    ///////////////////////////////////////////////
-                    // Create a register message for each client
-                    RegisterMessage register = new RegisterMessage(reqNo++, name, serverAddress, SERVER_PORT);
-                    byte[] sendData = register.serialize();
 
-                    // Create packet to send to server
-                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+                byte[] sendData = null;
+                DatagramPacket sendPacket = null;
 
-                    // Send packet to server
-                    socket.send(sendPacket);
-                    System.out.println("Message sent to server by client " + Thread.currentThread().getName());
-
-                    // Receive response from server
-                    byte[] receiveData = new byte[BUFFER_SIZE];
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-
-                    // Wait for response packet from server
-                    socket.receive(receivePacket);
-
-                    // Deserialize the received data into a RegisteredMessage
-                    Message receivedMessage = Message.deserialize(receivePacket.getData());
-                    if (receivedMessage.getCode() == Code.REGISTERED) {
-                        RegisteredMessage rm = (RegisteredMessage) receivedMessage;
-                        System.out.println("Received from server by client "
-                                + Thread.currentThread().getName()
-                                + ": Code: " + rm.getCode()
-                                + ", REQ#: " + rm.getReqNo());
-                    } else if (receivedMessage.getCode() == Code.REGISTER_DENIED) {
-                        RegisterDeniedMessage rdm = (RegisterDeniedMessage) receivedMessage;
-                        System.out.println("Received from server by client "
-                                + Thread.currentThread().getName()
-                                + ": Code: " + rdm.getCode()
-                                + ", REQ#: " + rdm.getReqNo()
-                                + ", Reason: " + rdm.getReason());
+                switch (code) {
+                    case REGISTER: {
+                        String name = "Client" + reqNo;
+                        RegisterMessage registerMessage = new RegisterMessage(reqNo, name, serverAddress, SERVER_PORT);
+                        sendData = registerMessage.serialize();
+                        break;
                     }
-                } else if (code == Code.DE_REGISTER) {
-                    DeRegisterMessage deRegister = new DeRegisterMessage(reqNo, "Client1");
-                    byte[] sendData = deRegister.serialize();
-
-                    // Create packet to send to server
-                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
-
-                    // Send packet to server
-                    socket.send(sendPacket);
-                    System.out.println("Message sent to server by client " + Thread.currentThread().getName());
+                    case DE_REGISTER: {
+                        String name = "Client" + reqNo;
+                        DeRegisterMessage deRegisterMessage = new DeRegisterMessage(reqNo, name);
+                        sendData = deRegisterMessage.serialize();
+                        break;
+                    }
+                    case PUBLISH: {
+                        String name = "Client" + reqNo; // Example name, adjust as needed
+                        PublishMessage publishMessage = new PublishMessage(reqNo, name, filesToPublish);
+                        sendData = publishMessage.serialize();
+                        break;
+                    }
+                    // Add other cases as necessary
                 }
 
-//            // Process response
-//            String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-//            System.out.println("Received from server: " + receivedMessage);
+                if (sendData != null) {
+                    sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+                    socket.send(sendPacket);
+                    System.out.println(code + " message sent to server by client " + Thread.currentThread().getName());
+                }
+
+                // Wait for response from server
+                byte[] receiveData = new byte[BUFFER_SIZE];
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                socket.receive(receivePacket);
+
+                // Deserialize the received data into a Message
+                Message receivedMessage = Message.deserialize(receivePacket.getData());
+                if (receivedMessage instanceof PublishedMessage) {
+                    System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
+                } else if (receivedMessage instanceof PublishDeniedMessage) {
+                    PublishDeniedMessage deniedMessage = (PublishDeniedMessage) receivedMessage;
+                    System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() + 
+                        ": Reason: " + deniedMessage.getReason());
+                } else {
+                    // Handle other responses or unknown message types
+                    System.out.println("Received an unrecognized message from the server.");
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -97,22 +92,19 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        int reqNo = 1;  // REQ# numbers the requests of each Client
-        // Number of clients to run
-        int numClients = 5;
-        Code code = Code.REGISTER;
-        for (int i = 0; i < numClients; i++) {
-            new Thread(new ClientTask(reqNo, code)).start();
-            ++reqNo;
-        }
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
-        ++reqNo;
+        // Example usage
+        int reqNo = 1; // Start with request number 1
 
-        // TODO: Implement some sort of input CLI to choose messages
+        // Register clients
+        for (int i = 1; i <= 5; i++) {
+            new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+        }
+
+        // Example publishing
+        List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
+        new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
+
+        // De-register a client as an example
+        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
     }
 }
