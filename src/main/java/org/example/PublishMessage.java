@@ -1,5 +1,6 @@
 package org.example;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class PublishMessage extends Message {
@@ -34,5 +35,12 @@ public class PublishMessage extends Message {
         return dataString.getBytes();
     }
 
-   
+    //Create a deserilization class?
+    public static PublishMessage deserialize(byte[] data) {
+        String[] parts = new String(data).split(",", 3);
+        int reqNo = Integer.parseInt(parts[0]);
+        String name = parts[1];
+        List<String> files = Arrays.asList(parts[2].split(";"));
+        return new PublishMessage(reqNo, name, files);
+    }
 }
