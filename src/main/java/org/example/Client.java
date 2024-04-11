@@ -91,6 +91,22 @@ public class Client {
 
                 // Deserialize the received data into a Message
                 Message receivedMessage = Message.deserialize(receivePacket.getData());
+
+                if (receivedMessage.getCode() == Code.REGISTERED) {
+                    RegisteredMessage rm = (RegisteredMessage) receivedMessage;
+                    System.out.println("Received from server by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + rm.getCode()
+                            + ", REQ#: " + rm.getReqNo());
+                } else if (receivedMessage.getCode() == Code.REGISTER_DENIED) {
+                    RegisterDeniedMessage rdm = (RegisterDeniedMessage) receivedMessage;
+                    System.out.println("Received from server by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + rdm.getCode()
+                            + ", REQ#: " + rdm.getReqNo()
+                            + ", Reason: " + rdm.getReason());
+                }
+
                 if (receivedMessage instanceof PublishedMessage) {
                     System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
                 } else if (receivedMessage instanceof PublishDeniedMessage) {
