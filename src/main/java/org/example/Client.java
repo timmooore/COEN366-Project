@@ -5,18 +5,23 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Set;
 
 public class Client {
     public static final String SERVER_IP = "localhost";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
 
+    private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
+
     private static class ClientTask implements Runnable {
-        private int reqNo; // Request number for this instance of ClientTask
+        private final int reqNo; // Request number for this instance of ClientTask
         private final Code code;
         private List<String> filesToPublish; // Only used for PUBLISH
+        private String fileName;  // For FILE_REQ
+        private int TCPSocket;// For FILE_CONF
 
         // Constructor for REGISTER and DE_REGISTER
         public ClientTask(int reqNo, Code code) {
@@ -32,6 +37,12 @@ public class Client {
             this.filesToPublish = filesToPublish;
         }
 
+        public ClientTask(int reqNo, Code code, String fileName) {
+            this.reqNo = reqNo;
+            this.code = code;
+            this.fileName = fileName;
+        }
+
         @Override
         public void run() {
             try (DatagramSocket socket = new DatagramSocket()) {
@@ -40,6 +51,7 @@ public class Client {
                 byte[] sendData = null;
                 DatagramPacket sendPacket = null;
 
+                // TODO: Client + reqNo is not a good name. Should be unique to each client
                 switch (code) {
                     case REGISTER: {
                         String name = "Client" + reqNo;
@@ -59,6 +71,10 @@ public class Client {
                         sendData = publishMessage.serialize();
                         break;
                     }
+                    case FILE_REQ:
+                        FileReqMessage fileReqMessage = new FileReqMessage(reqNo, fileName);
+                        sendData = fileReqMessage.serialize();
+                        break;
                     // Add other cases as necessary
                 }
 
