@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Client {
     public static final String SERVER_IP = "localhost";
@@ -105,13 +102,11 @@ public class Client {
                             + ": Code: " + rdm.getCode()
                             + ", REQ#: " + rdm.getReqNo()
                             + ", Reason: " + rdm.getReason());
-                }
-
-                if (receivedMessage instanceof PublishedMessage) {
+                } else if (receivedMessage instanceof PublishedMessage) {
                     System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
                 } else if (receivedMessage instanceof PublishDeniedMessage) {
                     PublishDeniedMessage deniedMessage = (PublishDeniedMessage) receivedMessage;
-                    System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() + 
+                    System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                         ": Reason: " + deniedMessage.getReason());
                 } else {
                     // Handle other responses or unknown message types
@@ -122,6 +117,75 @@ public class Client {
             }
         }
     }
+
+    // Private class for handling peer connections and file transfers
+    private static class HandleIncomingRequest implements Runnable {
+        private final DatagramPacket packet;
+
+        public HandleIncomingRequest(DatagramPacket packet) {
+            this.packet = packet;
+        }
+
+        @Override
+        public void run() {
+            // Deserialize the received data into a Message
+            Message receivedMessage = Message.deserialize(packet.getData());
+
+            // Handle the received message based on its type
+            // Implement your logic here based on the type of receivedMessage
+            // For example:
+            if (receivedMessage.getCode() == Code.FILE_REQ) {
+                FileReqMessage fileReqMessage = (FileReqMessage) receivedMessage;
+                // Process file request and send the file back or respond accordingly
+                System.out.println("Received FILE_REQ from client: " + fileReqMessage.getFileName());
+            }
+            // Handle other message types as needed
+        }
+    }
+
+//    public static void main(String[] args) {
+//        // Start the incoming request handler in a separate thread
+//        // new Thread(new IncomingRequestHandler()).start();
+//
+//        // Example usage
+//        Scanner scanner = new Scanner(System.in);
+//        int reqNo = 1;
+//
+//        while (true) {
+//            System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 10 = Multiple registers, 0 = exit): ");
+//            int messageType = scanner.nextInt();
+//
+//            switch (messageType) {
+//                case 1:
+//                    new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+//                    break;
+//                case 2:
+//                    new Thread(new ClientTask(reqNo++, Code.DE_REGISTER)).start();
+//                    break;
+//                case 3:
+//                    List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
+//                    new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
+//                    break;
+//                case 4:
+//                    scanner.nextLine(); // Consume the newline character
+//                    System.out.println("Enter filename for FILE_REQ: ");
+//                    String fileName = scanner.nextLine().trim();
+//                    new Thread(new ClientTask(reqNo++, Code.FILE_REQ, fileName)).start();
+//                    break;
+//                case 10:
+//                    // Register clients
+//                    for (int i = 1; i <= 5; i++) {
+//                        new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+//                    }
+//                    break;
+//                case 0:
+//                    // TODO: Make sure resources are closed
+//                    return;
+//                default:
+//                    System.out.println("Invalid message type.");
+//            }
+//        }
+//    }
 
     public static void main(String[] args) {
         // Example usage
