@@ -10,6 +10,7 @@ public class Client {
     public static final String SERVER_IP = "localhost";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
+    private static String name;
 
     private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
 
@@ -18,8 +19,11 @@ public class Client {
         private final Code code;
         private List<String> filesToPublish; // Only used for PUBLISH
         private String fileName;  // For FILE_REQ
-        private int TCPSocket;// For FILE_CONF
+        private int TCPSocket;  // For FILE_CONF
 
+
+        // TODO: This might get hard to manage as more messages are added, esp. if
+        //       the signatures are the same
         // Constructor for REGISTER and DE_REGISTER
         public ClientTask(int reqNo, Code code) {
             this.reqNo = reqNo;
@@ -46,25 +50,21 @@ public class Client {
                 InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
 
                 byte[] sendData = null;
-                DatagramPacket sendPacket = null;
+                DatagramPacket sendPacket;
 
-                // TODO: Client + reqNo is not a good name. Should be unique to each client
                 switch (code) {
                     case REGISTER: {
-                        String name = "Client" + reqNo;
-                        RegisterMessage registerMessage = new RegisterMessage(reqNo, name, serverAddress, SERVER_PORT);
+                        RegisterMessage registerMessage = new RegisterMessage(reqNo, Client.name, serverAddress, SERVER_PORT);
                         sendData = registerMessage.serialize();
                         break;
                     }
                     case DE_REGISTER: {
-                        String name = "Client" + reqNo;
-                        DeRegisterMessage deRegisterMessage = new DeRegisterMessage(reqNo, name);
+                        DeRegisterMessage deRegisterMessage = new DeRegisterMessage(reqNo, Client.name);
                         sendData = deRegisterMessage.serialize();
                         break;
                     }
                     case PUBLISH: {
-                        String name = "Client" + reqNo; // Example name, adjust as needed
-                        PublishMessage publishMessage = new PublishMessage(reqNo, name, filesToPublish);
+                        PublishMessage publishMessage = new PublishMessage(reqNo, Client.name, filesToPublish);
                         sendData = publishMessage.serialize();
                         break;
                     }
@@ -104,8 +104,7 @@ public class Client {
                             + ", Reason: " + rdm.getReason());
                 } else if (receivedMessage instanceof PublishedMessage) {
                     System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
-                } else if (receivedMessage instanceof PublishDeniedMessage) {
-                    PublishDeniedMessage deniedMessage = (PublishDeniedMessage) receivedMessage;
+                } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
                     System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                         ": Reason: " + deniedMessage.getReason());
                 } else {
@@ -143,64 +142,72 @@ public class Client {
         }
     }
 
-//    public static void main(String[] args) {
-//        // Start the incoming request handler in a separate thread
-//        // new Thread(new IncomingRequestHandler()).start();
-//
-//        // Example usage
-//        Scanner scanner = new Scanner(System.in);
-//        int reqNo = 1;
-//
-//        while (true) {
-//            System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 10 = Multiple registers, 0 = exit): ");
-//            int messageType = scanner.nextInt();
-//
-//            switch (messageType) {
-//                case 1:
-//                    new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
-//                    break;
-//                case 2:
-//                    new Thread(new ClientTask(reqNo++, Code.DE_REGISTER)).start();
-//                    break;
-//                case 3:
-//                    List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
-//                    new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
-//                    break;
-//                case 4:
-//                    scanner.nextLine(); // Consume the newline character
-//                    System.out.println("Enter filename for FILE_REQ: ");
-//                    String fileName = scanner.nextLine().trim();
-//                    new Thread(new ClientTask(reqNo++, Code.FILE_REQ, fileName)).start();
-//                    break;
-//                case 10:
-//                    // Register clients
-//                    for (int i = 1; i <= 5; i++) {
-//                        new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
-//                    }
-//                    break;
-//                case 0:
-//                    // TODO: Make sure resources are closed
-//                    return;
-//                default:
-//                    System.out.println("Invalid message type.");
-//            }
-//        }
-//    }
-
     public static void main(String[] args) {
+        // Start the incoming request handler in a separate thread
+        // new Thread(new IncomingRequestHandler()).start();
+
         // Example usage
-        int reqNo = 1; // Start with request number 1
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter your Client name: ");
 
-        // Register clients
-        for (int i = 1; i <= 5; i++) {
-            new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+        name = scanner.nextLine();
+
+        int reqNo = 1;
+
+        while (true) {
+            System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 10 = Multiple registers, 0 = exit): ");
+            int messageType = scanner.nextInt();
+
+            // TODO: chatGPT generated. Test each that they work
+            switch (messageType) {
+                case 1:
+                    new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+                    break;
+                case 2:
+                    new Thread(new ClientTask(reqNo++, Code.DE_REGISTER)).start();
+                    break;
+                case 3:
+                    List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
+                    new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
+                    break;
+                case 4:
+                    scanner.nextLine(); // Consume the newline character
+                    System.out.println("Enter filename for FILE_REQ: ");
+                    String fileName = scanner.nextLine().trim();
+                    new Thread(new ClientTask(reqNo++, Code.FILE_REQ, fileName)).start();
+                    break;
+                case 10:
+                    // Register clients with names Client1 -> Client5
+                    String tmpClientName = name;
+                    for (int i = 1; i <= 5; i++) {
+                        name = tmpClientName + i;
+                        new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+                    }
+                    name = tmpClientName;
+                    break;
+                case 0:
+                    // TODO: Make sure resources are closed
+                    return;
+                default:
+                    System.out.println("Invalid message type.");
+            }
         }
-
-        // Example publishing
-        List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
-        new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
-
-        // De-register a client as an example
-        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
     }
+
+//    public static void main(String[] args) {
+//        // Example usage
+//        int reqNo = 1; // Start with request number 1
+//
+//        // Register clients
+//        for (int i = 1; i <= 5; i++) {
+//            new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
+//        }
+//
+//        // Example publishing
+//        List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
+//        new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
+//
+//        // De-register a client as an example
+//        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
+//    }
 }
