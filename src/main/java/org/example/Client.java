@@ -1,11 +1,10 @@
 package org.example;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.*;
+import java.net.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Client {
     public static final String SERVER_IP = "localhost";
@@ -15,6 +14,9 @@ public class Client {
 
     private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
 
+    // Create a thread pool of 10 to handle up to 10 transfers at once
+    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
+
     private static class ClientTask implements Runnable {
         private final String clientName;
         private final int reqNo; // Request number for this instance of ClientTask
@@ -22,7 +24,7 @@ public class Client {
         private List<String> filesToPublish; // Only used for PUBLISH
         private String fileName;  // For FILE_REQ
         private final DatagramSocket socket;
-        private int TCPSocket;  // For FILE_CONF
+        private int tcpSocket;  // For FILE_CONF
 
 
         // TODO: This might get hard to manage as more messages are added, esp. if
@@ -45,6 +47,7 @@ public class Client {
             this.filesToPublish = filesToPublish;
         }
 
+        // Constructor for FILE-REQ
         public ClientTask(DatagramSocket socket, String clientName, int reqNo, Code code, String fileName) {
             this.socket = socket;
             this.clientName = clientName;
@@ -55,9 +58,10 @@ public class Client {
 
         @Override
         public void run() {
-            InetAddress serverAddress;
+            InetAddress destinationAddress;
+            int destinationPort = SERVER_PORT;
             try {
-                serverAddress = InetAddress.getByName(SERVER_IP);
+                destinationAddress = InetAddress.getByName(SERVER_IP);
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             }
@@ -67,7 +71,7 @@ public class Client {
 
             switch (code) {
                 case REGISTER: {
-                    RegisterMessage registerMessage = new RegisterMessage(reqNo, clientName, serverAddress, socket.getLocalPort());
+                    RegisterMessage registerMessage = new RegisterMessage(reqNo, clientName, destinationAddress, socket.getLocalPort());
                     sendData = registerMessage.serialize();
                     break;
                 }
@@ -82,6 +86,13 @@ public class Client {
                     break;
                 }
                 case FILE_REQ:
+                    // TODO: Get IP address and UDP port of Client by searching for fileName
+                    try {
+                        destinationAddress = InetAddress.getByName(SERVER_IP);
+                        destinationPort = 4000;
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException(e);
+                    }
                     FileReqMessage fileReqMessage = new FileReqMessage(reqNo, fileName);
                     sendData = fileReqMessage.serialize();
                     break;
@@ -89,10 +100,9 @@ public class Client {
             }
 
             if (sendData != null) {
-                sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+                sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
                 try {
                     socket.send(sendPacket);
-                    System.out.println("Port: " + socket.getLocalPort());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -143,6 +153,22 @@ public class Client {
                 } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
                     System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                             ": Reason: " + deniedMessage.getReason());
+                } else if (receivedMessage instanceof FileReqMessage fileReqMessage) {
+                    System.out.println("Received from server by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + fileReqMessage.getCode()
+                            + ", REQ#: " + fileReqMessage.getReqNo()
+                            + ", File Name: " + fileReqMessage.getFileName());
+
+                    executor.submit(() -> handleFileTransfer(fileReqMessage, receivePacket));
+                } else if (receivedMessage instanceof FileConfMessage fileConfMessage) {
+                    System.out.println("Received from server by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + fileConfMessage.getCode()
+                            + ", REQ#: " + fileConfMessage.getReqNo()
+                            + ", TCP Port: " + fileConfMessage.getTcpPort());
+
+                    executor.submit(() -> receiveFile(receivePacket.getAddress(), fileConfMessage.getTcpPort()));
                 } else {
                     // Handle other responses or unknown message types
                     System.out.println("Received an unrecognized message from the server.");
@@ -150,10 +176,115 @@ public class Client {
                 // Handle other message types as needed
             }
         }
+
+        private static String readFileToString(String fileName) throws IOException {
+            String filePath = "src" + File.separator
+                    + "main" + File.separator
+                    + "java" + File.separator
+                    + "org" + File.separator
+                    + "example" + File.separator
+                    + fileName;
+            StringBuilder contentBuilder = new StringBuilder();
+
+            try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    contentBuilder.append(line);
+                    contentBuilder.append("\n"); // Append newline to preserve original file's line breaks
+                }
+            }
+            return contentBuilder.toString();
+        }
+
+        private static List<String> splitIntoChunks(String content, int maxChunkSize) {
+            List<String> chunks = new ArrayList<>();
+            int length = content.length();
+            for (int i = 0; i < length; i += maxChunkSize) {
+                // Calculate end index for the current chunk
+                int endIndex = Math.min(i + maxChunkSize, length);
+                // Extract the chunk
+                String chunk = content.substring(i, endIndex);
+                chunks.add(chunk);
+            }
+            return chunks;
+        }
+
+        private void receiveFile(InetAddress hostAddress, int tcpPort) {
+            try (Socket clientSocket = new Socket(hostAddress, tcpPort)) {
+                InputStream inputStream = clientSocket.getInputStream();
+                ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+
+                Message receivedMessage;
+                if (objectInputStream.available() > 0) {
+                    receivedMessage = (Message) objectInputStream.readObject();
+                } else {
+                    System.out.println("No file to receive");
+                }
+
+//                if (receivedMessage instanceof FileMessage) {
+//                    // TODO: receive the chunk
+//                }
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private void handleFileTransfer(FileReqMessage fileReqMessage, DatagramPacket receivedPacket) {
+            try (ServerSocket tcpServerSocket = new ServerSocket(0)) {
+                int tcpPort = tcpServerSocket.getLocalPort();
+
+                InetAddress destinationAddress = receivedPacket.getAddress();
+                int destinationPort = receivedPacket.getPort();
+
+                FileConfMessage fileConfMessage = new FileConfMessage(fileReqMessage.getReqNo(), tcpPort);
+                byte[] sendData = fileConfMessage.serialize();
+
+                DatagramPacket sendPacket;
+
+                if (sendData != null) {
+                    sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
+                    try {
+                        socket.send(sendPacket);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    System.out.println(Code.FILE_CONF + " message sent to server by client " + Thread.currentThread().getName());
+
+                    Socket peerSocket = tcpServerSocket.accept();
+                    OutputStream outputStream = peerSocket.getOutputStream();
+
+                    try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream)) {
+                        // Split the requested file into chunks
+                        String fileText = readFileToString(fileReqMessage.getFileName());
+                        List<String> chunks = splitIntoChunks(fileText, 200);
+
+                        int index = 0;
+
+                        for (String chunk : chunks) {
+                            if (index == chunks.size() - 1) {
+                                // Last chunk
+                                FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
+                                        fileReqMessage.getFileName(), index, chunk);
+                            } else {
+                                FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
+                                        fileReqMessage.getFileName(), index, chunk);
+                            }
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public static void main(String[] args) {
-        try (DatagramSocket socket = new DatagramSocket()) {
+        // TODO: Change once file transfer testing complete
+        try (DatagramSocket socket = (args.length > 0 ? new DatagramSocket(4000) : new DatagramSocket())) {
             System.out.println("Port: " + socket.getLocalPort());
             // Start the incoming request handler in a separate thread
             new Thread(new IncomingMessageHandler(socket)).start();
@@ -217,3 +348,5 @@ public class Client {
         }
     }
 }
+
+// TODO: Might want to do reqNo validation if we have time
