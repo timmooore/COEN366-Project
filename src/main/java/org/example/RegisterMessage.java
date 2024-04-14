@@ -15,7 +15,6 @@ public class RegisterMessage extends Message {
         this.ipAddress = ipAddress;
         this.udpPort = udpPort;
     }
-
     public int getReqNo() {
         return reqNo;
     }

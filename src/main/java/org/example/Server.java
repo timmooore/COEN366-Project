@@ -87,6 +87,14 @@ public class Server {
                     handlePublish((PublishMessage) receivedMessage, packet);
                     break;
                 // Add cases for other message types as needed
+
+                //Added Remove
+                case REMOVE:
+                    handleRemove((RemoveMessage) receivedMessage, packet);
+                    break;
+
+
+
             }
         }
     }
@@ -106,7 +114,25 @@ public class Server {
             sendResponse(packet, response);
         }
     }
-    
+
+    private void handleRemove(RemoveMessage rm, DatagramPacket packet) {
+        if (clientNames.contains(rm.getName())) {
+            // Client is registered, remove files from the list
+            Set<String> files = clientFiles.getOrDefault(rm.getName(), new HashSet<>());
+            files.removeAll(rm.getFiles());
+            clientFiles.put(rm.getName(), files);
+
+            // Send REMOVED message
+            RemovedMessage response = new RemovedMessage(rm.getReqNo());
+            sendResponse(packet, response);
+        } else {
+            // Client not registered, handle error
+            RemoveDeniedMessage response = new RemoveDeniedMessage(rm.getReqNo(), "Client not registered");
+            sendResponse(packet, response);
+        }
+    }
+
+
     private void sendResponse(DatagramPacket packet, Message response) {
         byte[] responseData = response.serialize();
         DatagramPacket responsePacket = new DatagramPacket(responseData,
