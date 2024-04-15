@@ -184,16 +184,26 @@ public class Client {
                     + "org" + File.separator
                     + "example" + File.separator
                     + fileName;
+            StringBuilder contentBuilder = getStringBuilder(filePath);
+            return contentBuilder.toString();
+        }
+
+        private static StringBuilder getStringBuilder(String filePath) throws IOException {
             StringBuilder contentBuilder = new StringBuilder();
 
             try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
                 String line;
+                boolean firstLine = true;
+
                 while ((line = reader.readLine()) != null) {
+                    if (!firstLine) {
+                        contentBuilder.append("\n");
+                    }
                     contentBuilder.append(line);
-                    contentBuilder.append("\n"); // Append newline to preserve original file's line breaks
+                    firstLine = false;
                 }
             }
-            return contentBuilder.toString();
+            return contentBuilder;
         }
 
         private static List<String> splitIntoChunks(String content, int maxChunkSize) {
@@ -210,20 +220,46 @@ public class Client {
         }
 
         private void receiveFile(InetAddress hostAddress, int tcpPort) {
+            // TODO: (Optional) Potentially verify that the RQ# and fileName received match requested
             try (Socket clientSocket = new Socket(hostAddress, tcpPort)) {
                 InputStream inputStream = clientSocket.getInputStream();
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 
+                FileReceiver fileReceiver;
                 Message receivedMessage;
-                if (objectInputStream.available() > 0) {
-                    receivedMessage = (Message) objectInputStream.readObject();
+
+                boolean fileConstructed = false;
+
+                // Receive first message to get file name
+                receivedMessage = (Message) objectInputStream.readObject();
+                if (receivedMessage instanceof FileMessage fileMessage) {
+                    fileReceiver = new FileReceiver(fileMessage.getFileName());
+                    fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
+                } else if (receivedMessage instanceof FileEndMessage fileEndMessage) {
+                    fileReceiver = new FileReceiver(fileEndMessage.getFileName());
+                    fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
+                    fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
                 } else {
-                    System.out.println("No file to receive");
+                    fileReceiver = null;
                 }
 
-//                if (receivedMessage instanceof FileMessage) {
-//                    // TODO: receive the chunk
-//                }
+                assert fileReceiver != null;
+
+                // Receive the rest of the packets
+                while (!fileConstructed) {
+                    receivedMessage = (Message) objectInputStream.readObject();
+                    if (receivedMessage instanceof FileMessage fileMessage) {
+//                        System.out.println("Received fileMessage Object with text: " + fileMessage.getText());
+                        fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
+                    } else if (receivedMessage instanceof FileEndMessage fileEndMessage) {
+//                        System.out.println("Received fileEndMessage Object with text: " + fileEndMessage.getText());
+                        fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
+                        fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
+                    } else {
+                        System.out.println("Received an unknown packet, aborting");
+                        return;
+                    }
+                }
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -263,13 +299,17 @@ public class Client {
                         for (String chunk : chunks) {
                             if (index == chunks.size() - 1) {
                                 // Last chunk
-                                FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
+                                FileEndMessage fileEndMessage = new FileEndMessage(fileReqMessage.getReqNo(),
                                         fileReqMessage.getFileName(), index, chunk);
+                                objectOutputStream.writeObject(fileEndMessage);
                             } else {
                                 FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
                                         fileReqMessage.getFileName(), index, chunk);
+                                objectOutputStream.writeObject(fileMessage);
                             }
+                            ++index;
                         }
+                        System.out.println("NumChunksSent: " + index);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -349,4 +389,4 @@ public class Client {
     }
 }
 
-// TODO: Might want to do reqNo validation if we have time
+// TODO: (Optional) Might want to do reqNo validation if we have time
