@@ -1,10 +1,7 @@
 package org.example;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.*;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,6 +13,9 @@ public class Client {
     private static String name;
 
     private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
+
+    // Create a thread pool of 10 to handle up to 10 transfers at once
+    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     private static class ClientTask implements Runnable {
         private final String clientName;
@@ -329,16 +329,17 @@ public class Client {
             // Start the incoming request handler in a separate thread
             new Thread(new IncomingMessageHandler(socket)).start();
 
+            // Prompt user for the client name
+            System.out.println("Enter your Client name: ");
             Scanner scanner = new Scanner(System.in);
 
-        name = scanner.nextLine();
+            name = scanner.nextLine();
 
             int reqNo = 1;
 
             while (true) {
                 System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 10 = Multiple registers, 0 = exit): ");
                 int messageType = scanner.nextInt();
-
 
                 // TODO: chatGPT generated. Test each that they work
                 switch (messageType) {
