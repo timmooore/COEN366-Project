@@ -4,14 +4,17 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 
 public class Client {
     public static final String SERVER_IP = "localhost";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
 
-    private static final HashMap<String, Set<String>> clientFiles = new HashMap<>();
+    private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
 
     private static class ClientTask implements Runnable {
         private final int reqNo; // Request number for this instance of ClientTask
@@ -19,15 +22,12 @@ public class Client {
         private List<String> filesToPublish; // Only used for PUBLISH
         private String fileName;  // For FILE_REQ
         private int TCPSocket;// For FILE_CONF
-        private Map<String, Set<String>> clientFiles; // Pass clientFiles to the constructor
 
         // Constructor for REGISTER and DE_REGISTER
-        public ClientTask(int reqNo, Code code, Map<String, Set<String>> clientFiles) {
+        public ClientTask(int reqNo, Code code) {
             this.reqNo = reqNo;
             this.code = code;
             this.filesToPublish = null; // Not used for REGISTER/DE_REGISTER
-            this.fileName = fileName;
-            this.clientFiles = clientFiles; // Initialize clientFiles
         }
 
         // Overloaded constructor for PUBLISH with a list of files
@@ -106,16 +106,6 @@ public class Client {
                             + ", REQ#: " + rdm.getReqNo()
                             + ", Reason: " + rdm.getReason());
                 }
-                if (receivedMessage instanceof UpdateMessage) {
-                    UpdateMessage updateMessage = (UpdateMessage) receivedMessage;
-                    Map<String, ClientInfo> clientInfoMap = updateMessage.getClients();
-                    // Update client's internal state with the latest information
-                    // about registered clients and their available files
-                    //problem area
-                    // For example:
-                     updateInternalState(clientInfoMap);
-
-                }
 
                 if (receivedMessage instanceof PublishedMessage) {
                     System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
@@ -132,29 +122,6 @@ public class Client {
             }
         }
     }
-    // Update the client's internal state with the latest information
-    private static void updateInternalState(Map<String, ClientInfo> clientInfoMap) {
-        // Clear existing client files
-        clientFiles.clear();
-
-        // Iterate through the client info map and update the client files
-        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
-            String clientName = entry.getKey();
-            ClientInfo clientInfo = entry.getValue();
-            Set<String> files = clientInfo.getFiles();
-
-            // Update client files
-            clientFiles.put(clientName, new HashSet<>(files));
-        }
-
-        // Print updated client files (for demonstration)
-        System.out.println("Updated client files:");
-        for (Map.Entry<String, Set<String>> entry : clientFiles.entrySet()) {
-            String clientName = entry.getKey();
-            Set<String> files = entry.getValue();
-            System.out.println("Client: " + clientName + ", Files: " + files);
-        }
-    }
 
     public static void main(String[] args) {
         // Example usage
@@ -162,7 +129,7 @@ public class Client {
 
         // Register clients
         for (int i = 1; i <= 5; i++) {
-            new Thread(new ClientTask(reqNo++, Code.REGISTER, clientFiles)).start();
+            new Thread(new ClientTask(reqNo++, Code.REGISTER)).start();
         }
 
         // Example publishing
@@ -170,6 +137,6 @@ public class Client {
         new Thread(new ClientTask(reqNo++, Code.PUBLISH, filesToPublish)).start();
 
         // De-register a client as an example
-        new Thread(new ClientTask(reqNo, Code.DE_REGISTER, clientFiles)).start();
+        new Thread(new ClientTask(reqNo, Code.DE_REGISTER)).start();
     }
 }
