@@ -12,7 +12,8 @@ public class Client {
     private static final int BUFFER_SIZE = 1024;
     private static String name;
 
-    private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
+    // TODO: Hash each fileName to a List or Set of clientNames hosting that file
+    private static final HashMap<String, Set<String>> clientFiles = new HashMap<>();
 
     // Create a thread pool of 10 to handle up to 10 transfers at once
     private static final ExecutorService executor = Executors.newFixedThreadPool(10);
@@ -153,6 +154,15 @@ public class Client {
                 } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
                     System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                             ": Reason: " + deniedMessage.getReason());
+                } else if (receivedMessage instanceof UpdateMessage) {
+                    UpdateMessage updateMessage = (UpdateMessage) receivedMessage;
+                    HashSet<ClientInfo> clientInfoSet = updateMessage.getClientInfoSet();
+
+                    // Update client's internal state with the latest information
+                    // about registered clients and their available files
+                    //problem area
+                    // For example:
+                    // updateInternalState(clientInfoSet);
                 } else if (receivedMessage instanceof FileReqMessage fileReqMessage) {
                     System.out.println("Received from server by client "
                             + Thread.currentThread().getName()
@@ -319,6 +329,30 @@ public class Client {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    // Update the client's internal state with the latest information
+    private static void updateInternalState(Map<String, ClientInfo> clientInfoMap) {
+        // Clear existing client files
+        clientFiles.clear();
+
+        // Iterate through the client info map and update the client files
+        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
+            String clientName = entry.getKey();
+            ClientInfo clientInfo = entry.getValue();
+            Set<String> files = clientInfo.getFiles();
+
+            // Update client files
+            clientFiles.put(clientName, new HashSet<>(files));
+        }
+
+        // Print updated client files (for demonstration)
+        System.out.println("Updated client files:");
+        for (Map.Entry<String, Set<String>> entry : clientFiles.entrySet()) {
+            String clientName = entry.getKey();
+            Set<String> files = entry.getValue();
+            System.out.println("Client: " + clientName + ", Files: " + files);
         }
     }
 

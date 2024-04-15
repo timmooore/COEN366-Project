@@ -16,14 +16,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.*;
 
-
 public class Server {
     private static final int BUFFER_SIZE = 1024;
     private final int port;
     private final DatagramSocket socket;
     private boolean running;
     private final Logger logger = Logger.getLogger(Server.class.getName());
-    private final Map<String, InetAddress> registeredClients;
+
+    // TODO: Restore from .json
+    private static final HashMap<String, ClientInfo> registeredClients = new HashMap<String, ClientInfo>();
+    //private final Map<String, InetAddress> registeredClients;
     private final Map<String, Set<String>> clientFiles;
 
 /*
@@ -38,7 +40,6 @@ public class Server {
     public Server(int port) throws IOException {
         this.port = port;
         this.socket = new DatagramSocket(port);
-        this.registeredClients = new HashMap<>();
         this.clientFiles = new HashMap<>();
 
         logger.info("Server started on port: " + port);
@@ -86,7 +87,9 @@ public class Server {
                         RegisterDeniedMessage response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
                         sendResponse(packet, response);
                     } else {
-                        registeredClients.put(rm.getName(), rm.getIpAddress()); // removed clientnames and replaced, also added get ipaddress
+                        // TODO: Send Update to clients
+                        ClientInfo clientInfo = new ClientInfo(rm.getName(), rm.getIpAddress(), rm.getUdpPort());
+                        registeredClients.put(rm.getName(), clientInfo); // removed clientnames and replaced, also added get ipaddress
                         RegisteredMessage response = new RegisteredMessage(rm.getReqNo());
                         sendResponse(packet, response);
                     }
@@ -97,6 +100,8 @@ public class Server {
                     logger.info("Received: Code: " + receivedMessage.getCode() +
                             ", RQ#: " + drm.getReqNo() +
                             ", Name: " + drm.getName());
+
+                    // TODO: Send update to clients
                     registeredClients.remove(drm.getName());
                     StringBuilder msg = new StringBuilder(drm.getName() + " removed. Remaining clients: ");
                     for (String name : registeredClients.keySet()) msg.append(name).append(" ");
@@ -105,12 +110,14 @@ public class Server {
                 }
                 case PUBLISH:
                     handlePublish((PublishMessage) receivedMessage, packet);
+                    // TODO: Update clients here on in handlePublish
                     break;
                 // Add cases for other message types as needed
 
                 //Added Remove
                 case REMOVE:
                     handleRemove((RemoveMessage) receivedMessage, packet);
+                    // TODO: Update clients here on in handlePublish
                     break;
             }
         }
@@ -182,16 +189,21 @@ public class Server {
 
         private UpdateMessage constructUpdateMessage() {
             // Construct the update message containing registered clients and their files
-            return new UpdateMessage(reqNo, registeredClients, clientFiles);
+
+            HashSet<ClientInfo> clientInfos = new HashSet<>(registeredClients.values());
+            return new UpdateMessage(reqNo, clientInfos);
         }
 
         private void sendUpdateToAllClients(UpdateMessage updateMessage) {
             byte[] updateData = updateMessage.serialize();
 
-            for (Map.Entry<String, InetAddress> entry : updateMessage.getRegisteredClients().entrySet()) {
-                String clientName = entry.getKey();
-                InetAddress clientAddress = entry.getValue();
-                int clientPort = getClientPort(clientName); // Dynamically retrieve the port for each client
+            for (Map.Entry<String, ClientInfo> entry : registeredClients.entrySet()) {
+
+                ClientInfo clientInfo = entry.getValue();
+
+                String clientName = clientInfo.getName();
+                InetAddress clientAddress = clientInfo.getIpAddress();
+                int clientPort = clientInfo.getUdpPort(); // Dynamically retrieve the port for each client
 
                 // Construct DatagramPacket with update data, client address, and port
                 DatagramPacket updatePacket = new DatagramPacket(updateData, updateData.length, clientAddress, clientPort);
