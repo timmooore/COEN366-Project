@@ -1,7 +1,10 @@
 package org.example;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,9 +16,6 @@ public class Client {
     private static String name;
 
     private final HashMap<String, Set<String>> clientFiles = new HashMap<>();
-
-    // Create a thread pool of 10 to handle up to 10 transfers at once
-    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     private static class ClientTask implements Runnable {
         private final String clientName;
@@ -331,12 +331,7 @@ public class Client {
 
             Scanner scanner = new Scanner(System.in);
 
-            // Prompt user for the client name
-            // TODO: Uncomment and revert
-//            System.out.println("Enter your Client name: ");
-//
-//            name = scanner.nextLine();
-            name = "Tim";
+        name = scanner.nextLine();
 
             int reqNo = 1;
 
@@ -363,6 +358,16 @@ public class Client {
                         String fileName = scanner.nextLine().trim();
                         new Thread(new ClientTask(socket, name, reqNo++, Code.FILE_REQ, fileName)).start();
                         break;
+
+                    //William Added for remove
+                    case 5: // Assuming 5 is the option number for removing files
+                        scanner.nextLine(); // Consume the newline character
+                        System.out.println("Enter filenames to remove (comma-separated): ");
+                        String filesInput = scanner.nextLine();
+                        List<String> filesToRemove = Arrays.asList(filesInput.split(","));
+                        new Thread(new ClientTask(socket, name, reqNo++, Code.REMOVE, filesToRemove)).start();
+                        break;
+
                     case 10:
                         // Register clients with names Client1 -> Client5
                         for (int i = 1; i <= 5; i++) {
