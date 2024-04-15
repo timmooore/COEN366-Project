@@ -13,7 +13,10 @@ public class Client {
     private static String name;
 
     // TODO: Hash each fileName to a List or Set of clientNames hosting that file
-    private static final HashMap<String, Set<String>> clientFiles = new HashMap<>();
+    private static final HashMap<String, HashSet<String>> clientFiles = new HashMap<>();
+    private static final HashMap<String, ClientInfo> clientInfoSet = new HashMap<>();
+
+    private static final HashSet<String> hostedFiles = new HashSet<>();
 
     // Create a thread pool of 10 to handle up to 10 transfers at once
     private static final ExecutorService executor = Executors.newFixedThreadPool(10);

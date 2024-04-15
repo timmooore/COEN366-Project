@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
@@ -28,6 +29,7 @@ public class Server {
     //private final Map<String, InetAddress> registeredClients;
     private final Map<String, Set<String>> clientFiles;
 
+    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 /*
     private final DatagramSocket socket;
     private boolean running;
@@ -51,7 +53,7 @@ public class Server {
 //        Timer timer = new Timer();
 //        timer.schedule(new UpdateTask(), 0, 5 * 60 * 1000);
         Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new UpdateTask(reqNo), 0, 5 * 60 * 1000);
+        timer.scheduleAtFixedRate(new UpdateTask(), 0, 5 * 60 * 1000);
 
         while (running) {
             byte[] buf = new byte[BUFFER_SIZE];
@@ -87,10 +89,12 @@ public class Server {
                         RegisterDeniedMessage response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
                         sendResponse(packet, response);
                     } else {
-                        // TODO: Send Update to clients
                         ClientInfo clientInfo = new ClientInfo(rm.getName(), rm.getIpAddress(), rm.getUdpPort());
                         registeredClients.put(rm.getName(), clientInfo); // removed clientnames and replaced, also added get ipaddress
                         RegisteredMessage response = new RegisteredMessage(rm.getReqNo());
+
+                        // Submit a new UpdateTask
+                        executor.submit(new UpdateTask());
                         sendResponse(packet, response);
                     }
                     break;
@@ -106,6 +110,9 @@ public class Server {
                     StringBuilder msg = new StringBuilder(drm.getName() + " removed. Remaining clients: ");
                     for (String name : registeredClients.keySet()) msg.append(name).append(" ");
                     logger.info(msg.toString());
+
+                    // Submit a new UpdateTask to update clients
+                    executor.submit(new UpdateTask());
                     break;
                 }
                 case PUBLISH:
@@ -126,6 +133,8 @@ public class Server {
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
             // Client is registered, update file list
+
+            // TODO: Check this logic for new
             clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
             clientFiles.get(pm.getName()).addAll(pm.getFiles());
     
@@ -174,12 +183,6 @@ public class Server {
     }
 
     private class UpdateTask extends TimerTask {
-        private final int reqNo;
-
-        public UpdateTask(int reqNo) {
-            this.reqNo = reqNo;
-        }
-
         @Override
         public void run() {
             // Construct and send UPDATE message
@@ -189,9 +192,8 @@ public class Server {
 
         private UpdateMessage constructUpdateMessage() {
             // Construct the update message containing registered clients and their files
-
             HashSet<ClientInfo> clientInfos = new HashSet<>(registeredClients.values());
-            return new UpdateMessage(reqNo, clientInfos);
+            return new UpdateMessage(clientInfos);
         }
 
         private void sendUpdateToAllClients(UpdateMessage updateMessage) {
