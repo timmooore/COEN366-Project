@@ -63,11 +63,11 @@ public class Server {
                             ", UDP port: " + rm.getUdpPort());
                     if (clientNames.contains(rm.getName())) {
                         // Deny registration
-                        RegisterDeniedMessage response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
+                        PublishDeniedMessage response = new PublishDeniedMessage(rm.getReqNo(), "Name exists");
                         sendResponse(packet, response);
                     } else {
                         clientNames.add(rm.getName());
-                        RegisteredMessage response = new RegisteredMessage(rm.getReqNo());
+                        PublishedMessage response = new PublishedMessage(rm.getReqNo());
                         sendResponse(packet, response);
                     }
                     break;
