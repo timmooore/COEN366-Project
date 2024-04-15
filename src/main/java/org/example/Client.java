@@ -352,7 +352,9 @@ public class Client {
 
         // Print updated client files (for demonstration)
         System.out.println("Updated client files:");
-        for (Map.Entry<String, Set<String>> entry : clientFiles.entrySet()) {
+
+        //TODO: Fixed an error here, validate but allows me to run.
+        for (Map.Entry<String, HashSet<String>> entry : clientFiles.entrySet()) {
             String clientName = entry.getKey();
             Set<String> files = entry.getValue();
             System.out.println("Client: " + clientName + ", Files: " + files);
