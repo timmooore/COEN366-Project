@@ -63,11 +63,11 @@ public class Server {
                             ", UDP port: " + rm.getUdpPort());
                     if (clientNames.contains(rm.getName())) {
                         // Deny registration
-                        PublishDeniedMessage response = new PublishDeniedMessage(rm.getReqNo(), "Name exists");
+                        RegisterDeniedMessage response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
                         sendResponse(packet, response);
                     } else {
                         clientNames.add(rm.getName());
-                        PublishedMessage response = new PublishedMessage(rm.getReqNo());
+                        RegisteredMessage response = new RegisteredMessage(rm.getReqNo());
                         sendResponse(packet, response);
                     }
                     break;
@@ -92,9 +92,6 @@ public class Server {
                 case REMOVE:
                     handleRemove((RemoveMessage) receivedMessage, packet);
                     break;
-
-
-
             }
         }
     }
