@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -12,7 +11,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.*;
@@ -25,7 +23,7 @@ public class Server {
     private final Logger logger = Logger.getLogger(Server.class.getName());
 
     // TODO: Restore from .json
-    private static final HashMap<String, ClientInfo> registeredClients = new HashMap<String, ClientInfo>();
+    private static final HashMap<String, ClientInfo> registeredClients = new HashMap<>();
     //private final Map<String, InetAddress> registeredClients;
     private final Map<String, Set<String>> clientFiles;
 
@@ -47,7 +45,7 @@ public class Server {
         logger.info("Server started on port: " + port);
     }
 
-    public void start(int reqNo) {
+    public void start() {
         running = true;
         // Start a timer to send UPDATE message every 5 minutes
 //        Timer timer = new Timer();
@@ -88,6 +86,10 @@ public class Server {
                         // Deny registration
                         RegisterDeniedMessage response = new RegisterDeniedMessage(rm.getReqNo(), "Name exists");
                         sendResponse(packet, response);
+
+                        logger.info("Sent: Code: " + response.getCode() +
+                                ", RQ#: " + response.getReqNo() +
+                                " to client: " + rm.getName());
                     } else {
                         ClientInfo clientInfo = new ClientInfo(rm.getName(), rm.getIpAddress(), rm.getUdpPort());
                         registeredClients.put(rm.getName(), clientInfo); // removed clientnames and replaced, also added get ipaddress
@@ -96,6 +98,9 @@ public class Server {
                         // Submit a new UpdateTask
                         executor.submit(new UpdateTask());
                         sendResponse(packet, response);
+                        logger.info("Sent: Code: " + response.getCode() +
+                                ", RQ#: " + response.getReqNo() +
+                                " to client: " + rm.getName());
                     }
                     break;
                 }
@@ -153,7 +158,8 @@ public class Server {
         if (registeredClients.containsKey(rm.getName())) {
             // Client is registered, remove files from the list
             Set<String> files = clientFiles.getOrDefault(rm.getName(), new HashSet<>());
-            files.removeAll(rm.getFiles());
+            // files.removeAll(rm.getFiles());
+            rm.getFiles().forEach(files::remove);  // IntelliJ suggested change
             clientFiles.put(rm.getName(), files);
 
             // Send REMOVED message
@@ -208,6 +214,27 @@ public class Server {
         private UpdateMessage constructUpdateMessage() {
             // Construct the update message containing registered clients and their files
             HashSet<ClientInfo> clientInfos = new HashSet<>(registeredClients.values());
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("Full list of client info:\n");
+
+            for (ClientInfo clientInfo : clientInfos) {
+
+                sb.append("clientName: ").append(clientInfo.getName())
+                        .append(", IP address: ").append(clientInfo.getIpAddress().toString())
+                        .append(", UDP port: ").append(clientInfo.getUdpPort())
+                        .append(", files: ");
+
+                for (String fileName : clientInfo.getFiles()) {
+                    sb.append(fileName).append(", ");
+                }
+                sb.append("\n");
+            }
+
+            String clientInfoString = sb.toString();
+            logger.info(clientInfoString);
+
             return new UpdateMessage(clientInfos);
         }
 
@@ -245,12 +272,11 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        int reqNo = 1;
         int port = 3000; // Example port number
         try {
             Server server = new Server(port);
             Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
-            server.start(reqNo);
+            server.start();
         } catch (IOException e) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, "Failed to start server", e);
         }
