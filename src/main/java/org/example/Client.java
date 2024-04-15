@@ -111,6 +111,7 @@ public class Client {
                     Map<String, ClientInfo> clientInfoMap = updateMessage.getClients();
                     // Update client's internal state with the latest information
                     // about registered clients and their available files
+                    //problem arear
                     // For example:
                      updateInternalState(clientInfoMap);
 
