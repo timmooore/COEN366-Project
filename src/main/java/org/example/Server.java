@@ -246,14 +246,6 @@ public class Server {
                 }
             }
         }
-
-        private int getClientPort(String clientName) {
-            // Implement logic to retrieve the port associated with the given client name
-            // This could involve querying some data structure where client names and ports are stored
-            // For example, you might have a Map<String, Integer> that maps client names to their associated ports
-            // Return the port associated with the client name
-            return 0;  // If the port is not found or cannot be determined, you may return a default port or handle the situation accordingly
-        }
     }
 
     public static void main(String[] args) {

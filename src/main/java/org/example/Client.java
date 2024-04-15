@@ -77,16 +77,24 @@ public class Client {
                 case REGISTER: {
                     RegisterMessage registerMessage = new RegisterMessage(reqNo, clientName, destinationAddress, socket.getLocalPort());
                     sendData = registerMessage.serialize();
+                    // Handle update confirmation and print the message
+                    handleUpdateConfirmation("register");
+
                     break;
                 }
                 case DE_REGISTER: {
                     DeRegisterMessage deRegisterMessage = new DeRegisterMessage(reqNo, clientName);
                     sendData = deRegisterMessage.serialize();
+
+                    // Handle update confirmation and print the message
+                    handleUpdateConfirmation("deregister");
                     break;
                 }
                 case PUBLISH: {
                     PublishMessage publishMessage = new PublishMessage(reqNo, clientName, filesToPublish);
                     sendData = publishMessage.serialize();
+                    // Handle update confirmation and print the message
+                    handleUpdateConfirmation("publish");
                     break;
                 }
                 case FILE_REQ:
@@ -157,8 +165,13 @@ public class Client {
                 } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
                     System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                             ": Reason: " + deniedMessage.getReason());
+
                 } else if (receivedMessage instanceof UpdateMessage) {
+                    // Print the update confirmation message
+                    System.out.println("Your information has just been updated.");
+
                     UpdateMessage updateMessage = (UpdateMessage) receivedMessage;
+
                     HashSet<ClientInfo> clientInfoSet = updateMessage.getClientInfoSet();
 
                     // Update client's internal state with the latest information
@@ -166,6 +179,7 @@ public class Client {
                     //problem area
                     // For example:
                     // updateInternalState(clientInfoSet);
+
                 } else if (receivedMessage instanceof FileReqMessage fileReqMessage) {
                     System.out.println("Received from server by client "
                             + Thread.currentThread().getName()
@@ -182,10 +196,26 @@ public class Client {
                             + ", TCP Port: " + fileConfMessage.getTcpPort());
 
                     executor.submit(() -> receiveFile(receivePacket.getAddress(), fileConfMessage.getTcpPort()));
+
                 } else {
                     // Handle other responses or unknown message types
                     System.out.println("Received an unrecognized message from the server.");
                 }
+//                if (receivedMessage.getCode() == Code.UPDATE_CONFIRMED) {
+//                    UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
+//                    System.out.println("UPDATE confirmed for client "
+//                            + Thread.currentThread().getName()
+//                            + ": Code: " + ucm.getCode()
+//                            + ", REQ#: " + ucm.getReqNo());
+//                } else if (receivedMessage.getCode() == Code.UPDATE_DENIED) {
+//                    UpdateDeniedMessage udm = (UpdateDeniedMessage) receivedMessage;
+//                    System.out.println("UPDATE denied for client "
+//                            + Thread.currentThread().getName()
+//                            + ": Code: " + udm.getCode()
+//                            + ", REQ#: " + udm.getReqNo()
+//                            + ", Reason: " + udm.getReason());
+//                }
+                // 
                 // Handle other message types as needed
             }
         }
@@ -334,6 +364,15 @@ public class Client {
             }
         }
     }
+    private static void handleUpdateConfirmation(String action) {
+        // Update the client's internal state with the latest information
+        // about registered clients and their available files
+        // For example:
+        // updateInternalState(clientInfoSet);
+
+        // Print the confirmation message
+        System.out.println("Your " + action + " action has been completed, and your information has been updated.");
+    }
 
     // Update the client's internal state with the latest information
     private static void updateInternalState(Map<String, ClientInfo> clientInfoMap) {
@@ -404,7 +443,12 @@ public class Client {
                         String filesInput = scanner.nextLine();
                         List<String> filesToRemove = Arrays.asList(filesInput.split(","));
                         new Thread(new ClientTask(socket, name, reqNo++, Code.REMOVE, filesToRemove)).start();
+
+                        //yimika added
+                        // Handle update confirmation and print the message
+                        handleUpdateConfirmation("publish");
                         break;
+
 
                     case 10:
                         // Register clients with names Client1 -> Client5
