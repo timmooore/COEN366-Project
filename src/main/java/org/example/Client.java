@@ -290,7 +290,7 @@ public class Client {
                         System.out.println("Received an unrecognized message from the server.");
                         break;
                 }
-                if (receivedMessage.getCode() == Code.CONTACT_UPDATE) {
+                if (receivedMessage.getCode() == Code.UPDATE_CONTACT) {
                     UpdateContactMessage ucm = (UpdateContactMessage) receivedMessage;
                     System.out.println("UPDATE contact for client " + ucm.getName() +
                             ": REQ#: " + ucm.getReqNo() +
@@ -304,7 +304,7 @@ public class Client {
                         // Send confirmation message
                         UpdateConfirmedMessage confirmationMessage = new UpdateConfirmedMessage(ucm.getReqNo(), ucm.getName(), ucm.getIpAddress(), ucm.getUdpSocket());
                     }
-                }else if (receivedMessage.getCode() == Code.CONTACT_CONFIRMED) {
+                }else if (receivedMessage.getCode() == Code. UPDATE_CONFIRMED) {
                     UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
                     System.out.println("UPDATE confirmed for client "
                             + Thread.currentThread().getName()
@@ -312,7 +312,7 @@ public class Client {
                             + ", REQ#: " + ucm.getReqNo()
                             + ", IP Address: " + ucm.getIpAddress() +
                             ", UDP Socket: " + ucm.getUdpSocket());
-                } else if (receivedMessage.getCode() == Code.CONTACT_DENIED) {
+                } else if (receivedMessage.getCode() == Code. UPDATE_DENIED) {
                     UpdateDeniedMessage udm = (UpdateDeniedMessage) receivedMessage;
                     System.out.println("UPDATE denied for client "
                             + Thread.currentThread().getName()
