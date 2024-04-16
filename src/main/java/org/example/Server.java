@@ -17,7 +17,7 @@ import java.util.*;
 
 public class Server {
     private static final int BUFFER_SIZE = 1024;
-    private static final String SERVER_IP = "172.30.66.234";
+    private static final String SERVER_IP = "172.30.49.81";
     private final int port;
     private final DatagramSocket socket;
     private boolean running;
@@ -49,8 +49,6 @@ public class Server {
     public void start() {
         running = true;
         // Start a timer to send UPDATE message every 5 minutes
-//        Timer timer = new Timer();
-//        timer.schedule(new UpdateTask(), 0, 5 * 60 * 1000);
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new UpdateTask(), 0, 5 * 60 * 1000);
 
@@ -125,7 +123,6 @@ public class Server {
                     handlePublish((PublishMessage) receivedMessage, packet);
                     // TODO: Update clients here on in handlePublish
                     break;
-                // Add cases for other message types as needed
 
                 //Added Remove
                 case REMOVE:
@@ -172,10 +169,6 @@ public class Server {
 
             clientInfo.getFiles().addAll(pm.getFiles());
 
-//            // Client is registered, update file list
-//            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
-//            clientFiles.get(pm.getName()).addAll(pm.getFiles());
-
             // Send PUBLISHED message
             PublishedMessage response = new PublishedMessage(pm.getReqNo());
             sendResponse(packet, response);
@@ -193,9 +186,6 @@ public class Server {
         if (registeredClients.containsKey(rm.getName())) {
             rm.getFiles().forEach(registeredClients.get(rm.getName()).getFiles()::remove);
 
-//            // Client is registered, remove files from the list
-//            Set<String> files = clientFiles.getOrDefault(rm.getName(), new HashSet<>());
-//
 //            // files.removeAll(rm.getFiles());
 //            rm.getFiles().forEach(files::remove);  // IntelliJ suggested change
 //            clientFiles.put(rm.getName(), files);

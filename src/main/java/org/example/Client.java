@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Client {
-    public static final String SERVER_IP = "172.30.66.234";
+    public static final String SERVER_IP = "172.30.49.81";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
     private static String name;
@@ -480,15 +480,6 @@ public class Client {
                 throw new RuntimeException(e);
             }
         }
-    }
-    private static void handleUpdateConfirmation(String action) {
-        // Update the client's internal state with the latest information
-        // about registered clients and their available files
-        // For example:
-        // updateInternalState(clientInfoSet);
-
-        // Print the confirmation message
-        System.out.println("Your " + action + " action has been completed, and your information has been updated.");
     }
 
     // Update the client's internal state with the latest information
