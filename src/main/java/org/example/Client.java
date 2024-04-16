@@ -607,7 +607,7 @@ public class Client {
                 Message message = null;
                 switch (messageType) {
                     case 1:
-                        message = new RegisterMessage(reqNo++, name, InetAddress.getByName(SERVER_IP), socket.getLocalPort());
+                        message = new RegisterMessage(reqNo++, name, localHost, socket.getLocalPort());
                         break;
                     case 2:
                         message = new DeRegisterMessage(reqNo++, name);
