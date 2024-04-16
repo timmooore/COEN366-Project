@@ -17,6 +17,7 @@ import java.util.*;
 
 public class Server {
     private static final int BUFFER_SIZE = 1024;
+    private static final String SERVER_IP = "192.168.2.12";
     private final int port;
     private final DatagramSocket socket;
     private boolean running;
@@ -39,7 +40,7 @@ public class Server {
 
     public Server(int port) throws IOException {
         this.port = port;
-        this.socket = new DatagramSocket(port);
+        this.socket = new DatagramSocket(port, InetAddress.getByName(SERVER_IP));
         this.clientFiles = new HashMap<>();
 
         logger.info("Server started on port: " + port);
