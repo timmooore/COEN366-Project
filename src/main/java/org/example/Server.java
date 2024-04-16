@@ -134,18 +134,19 @@ public class Server {
             }
         }
     }
-    
+
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
             // Client is registered, update file list
-
-            // TODO: Check this logic for new
             clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
             clientFiles.get(pm.getName()).addAll(pm.getFiles());
-    
+
             // Send PUBLISHED message
             PublishedMessage response = new PublishedMessage(pm.getReqNo());
             sendResponse(packet, response);
+
+            // Trigger update
+            executor.submit(new UpdateTask());
         } else {
             // Client not registered, send PUBLISH-DENIED
             PublishDeniedMessage response = new PublishDeniedMessage(pm.getReqNo(), "Client not registered");
@@ -164,12 +165,16 @@ public class Server {
             // Send REMOVED message
             RemovedMessage response = new RemovedMessage(rm.getReqNo());
             sendResponse(packet, response);
+
+            // Trigger update
+            executor.submit(new UpdateTask());
         } else {
             // Client not registered, handle error
             RemoveDeniedMessage response = new RemoveDeniedMessage(rm.getReqNo(), "Client not registered");
             sendResponse(packet, response);
         }
     }
+
 
     private void sendResponse(DatagramPacket packet, Message response) {
         byte[] responseData = response.serialize();
@@ -182,11 +187,21 @@ public class Server {
         }
     }
 
+
+
+
+
+
     public void stop() {
         running = false;
         socket.close();
         logger.info("Server stopped.");
     }
+
+
+
+
+
 
     private class UpdateTask extends TimerTask {
         @Override

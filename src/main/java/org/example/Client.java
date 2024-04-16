@@ -222,7 +222,7 @@ public class Client {
 //                            + ", REQ#: " + udm.getReqNo()
 //                            + ", Reason: " + udm.getReason());
 //                }
-                // 
+                //
                 // Handle other message types as needed
             }
         }
@@ -441,11 +441,14 @@ public class Client {
             int reqNo = 1;
 
             while (true) {
-                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 10 = Multiple registers, 0 = exit): ");
+                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 5 = REMOVE, 0 = EXIT): ");
                 int messageType = scanner.nextInt();
+                scanner.nextLine(); // Consume the newline character left by nextInt()
+
+
 
                 // TODO: chatGPT generated. Test each that they work
-                switch (messageType) {
+                switch (messageType)  {
                     case 1:
                         new Thread(new ClientTask(socket, name, reqNo++, Code.REGISTER)).start();
                         break;
@@ -453,19 +456,17 @@ public class Client {
                         new Thread(new ClientTask(socket, name, reqNo++, Code.DE_REGISTER)).start();
                         break;
                     case 3:
-                        List<String> filesToPublish = Arrays.asList("file1.txt", "file2.txt");
+                        System.out.println("Enter filenames to publish (comma-separated): ");
+                        String publishInput = scanner.nextLine();
+                        List<String> filesToPublish = Arrays.asList(publishInput.split(","));
                         new Thread(new ClientTask(socket, name, reqNo++, Code.PUBLISH, filesToPublish)).start();
                         break;
                     case 4:
-                        scanner.nextLine(); // Consume the newline character
                         System.out.println("Enter filename for FILE_REQ: ");
                         String fileName = scanner.nextLine().trim();
                         new Thread(new ClientTask(socket, name, reqNo++, Code.FILE_REQ, fileName)).start();
                         break;
-
-                    //William Added for remove
-                    case 5: // Assuming 5 is the option number for removing files
-                        scanner.nextLine(); // Consume the newline character
+                    case 5:
                         System.out.println("Enter filenames to remove (comma-separated): ");
                         String filesInput = scanner.nextLine();
                         List<String> filesToRemove = Arrays.asList(filesInput.split(","));
@@ -475,8 +476,6 @@ public class Client {
                         // Handle update confirmation and print the message
                         handleUpdateConfirmation("publish");
                         break;
-
-
                     case 10:
                         // Register clients with names Client1 -> Client5
                         for (int i = 1; i <= 5; i++) {
@@ -491,8 +490,12 @@ public class Client {
                         }
                         break;
                     case 0:
-                        // TODO: Make sure resources are closed
-                        return;
+
+                        // TODO: Make sure resources are closed  (William: Worked on adding this just need to validate)
+                        // Make sure resources are closed
+                        socket.close();
+                        scanner.close();
+                        return; // Exit the program
                     default:
                         System.out.println("Invalid message type.");
                 }
