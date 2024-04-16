@@ -132,9 +132,35 @@ public class Server {
                     handleRemove((RemoveMessage) receivedMessage, packet);
                     // TODO: Update clients here on in handlePublish
                     break;
+                case CONTACT_CONFIRMED: {
+                    handleUpdateConfirmed((UpdateConfirmedMessage) receivedMessage);
+                    // Handle UPDATE_CONFIRMED message
+                    break;
+                }
+                case CONTACT_DENIED: {
+                    handleUpdateDenied((UpdateDeniedMessage) receivedMessage);
+                    // Handle UPDATE_DENIED message
+                    break;
+                }
+                default: {
+                    logger.warning("Received an unrecognized message with code: " + receivedMessage.getCode());
+                    break;
+                }
             }
         }
+    }private void handleUpdateConfirmed(UpdateConfirmedMessage confirmedMessage) {
+        logger.info("UPDATE confirmed for client " + confirmedMessage.getName() +
+                ": REQ#: " + confirmedMessage.getReqNo());
     }
+
+    // Handle UPDATE_DENIED message
+    private void handleUpdateDenied(UpdateDeniedMessage deniedMessage) {
+        logger.warning("UPDATE denied for client " + deniedMessage.getName() +
+                ": REQ#: " + deniedMessage.getReqNo() +
+                ", Reason: " + deniedMessage.getReason());
+    }
+
+
 
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
@@ -194,6 +220,9 @@ public class Server {
             logger.log(Level.SEVERE, "Failed to send response: ", e);
         }
     }
+
+
+
 
 
 
