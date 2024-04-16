@@ -137,9 +137,13 @@ public class Server {
 
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
-            // Client is registered, update file list
-            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
-            clientFiles.get(pm.getName()).addAll(pm.getFiles());
+            ClientInfo clientInfo = registeredClients.get(pm.getName());
+
+            clientInfo.getFiles().addAll(pm.getFiles());
+
+//            // Client is registered, update file list
+//            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
+//            clientFiles.get(pm.getName()).addAll(pm.getFiles());
 
             // Send PUBLISHED message
             PublishedMessage response = new PublishedMessage(pm.getReqNo());
