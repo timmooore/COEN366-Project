@@ -597,7 +597,7 @@ public class Client {
 
             // TODO: chatGPT generated. Test each that they work
             while (true) {
-                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 5 = REMOVE, 10 = Multiple registers, 0 = EXIT): ");
+                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 5 = REMOVE, 6 = UPDATE_CONTACT, 10 = Multiple registers, 0 = EXIT): ");
                 int messageType = scanner.nextInt();
                 scanner.nextLine(); // Consume the newline character
 
@@ -623,6 +623,14 @@ public class Client {
                         System.out.println("Enter filenames to remove (comma-separated): ");
                         List<String> filesToRemove = Arrays.asList(scanner.nextLine().split(","));
                         message = new RemoveMessage(reqNo++, name, filesToRemove);
+                        break;
+                    case 6:
+                        InetAddress newLocalHost = InetAddress.getLocalHost();
+                        int newLocalPort = socket.getLocalPort();
+
+                        message = new UpdateContactMessage(reqNo++, name, newLocalHost, newLocalPort);
+                        new Thread(new ClientTask(socket, message)).start();
+                        System.out.println("Contact information updated with IP: " + newLocalHost.getHostAddress() + " and Port: " + newLocalPort);
                         break;
                     case 10:
                         // Handle multiple registrations
