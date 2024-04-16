@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Client {
     public static final String SERVER_IP = "192.168.2.12";
@@ -77,11 +78,25 @@ public class Client {
         public void run() {
             try {
                 byte[] sendData = message.serialize();
-                InetAddress destinationAddress = InetAddress.getByName(SERVER_IP);
-                int destinationPort = SERVER_PORT; // Default port, adjust based on message type if needed
 
-                if (message instanceof FileReqMessage) {
-                    destinationPort = 4000; // Special port for FILE_REQ if necessary
+                int destinationPort;
+                InetAddress destinationAddress;
+
+                if (message.getCode() == Code.FILE_REQ) {
+                    FileReqMessage frm = (FileReqMessage) message;
+                    String fileName = frm.getFileName();
+                    ClientInfo clientInfo = getClientInfo(fileName);
+                    if (clientInfo == null) {
+                        // TODO: Don't know what to do but should do something
+                        System.out.println("The file '" + fileName + "' is not shared by any peers, aborting");
+                        return;
+                    } else {
+                        destinationAddress = clientInfo.getIpAddress();
+                        destinationPort = clientInfo.getUdpPort(); // Special port for FILE_REQ if necessary
+                    }
+                } else {
+                    destinationAddress = InetAddress.getByName(SERVER_IP);
+                    destinationPort = SERVER_PORT; // Default port, adjust based on message type if needed
                 }
 
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
@@ -227,7 +242,7 @@ public class Client {
 
                     case FILE_REQ:
                         FileReqMessage frm = (FileReqMessage) receivedMessage;
-                        System.out.println("Received from server by client "
+                        System.out.println("Received from peer by client "
                                 + Thread.currentThread().getName()
                                 + ": Code: " + frm.getCode()
                                 + ", REQ#: " + frm.getReqNo()
@@ -328,10 +343,12 @@ public class Client {
 
                 // Receive first message to get file name
                 receivedMessage = (Message) objectInputStream.readObject();
-                if (receivedMessage instanceof FileMessage fileMessage) {
+                if (receivedMessage.getCode() == Code.FILE) {
+                    FileMessage fileMessage = (FileMessage) receivedMessage;
                     fileReceiver = new FileReceiver(fileMessage.getFileName());
                     fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
-                } else if (receivedMessage instanceof FileEndMessage fileEndMessage) {
+                } else if (receivedMessage.getCode() == Code.FILE_END) {
+                    FileEndMessage fileEndMessage = (FileEndMessage) receivedMessage;
                     fileReceiver = new FileReceiver(fileEndMessage.getFileName());
                     fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
                     fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
@@ -367,6 +384,9 @@ public class Client {
 
                 InetAddress destinationAddress = receivedPacket.getAddress();
                 int destinationPort = receivedPacket.getPort();
+
+                String fileName = fileReqMessage.getFileName();
+
 
                 FileConfMessage fileConfMessage = new FileConfMessage(fileReqMessage.getReqNo(), tcpPort);
                 byte[] sendData = fileConfMessage.serialize();
@@ -471,6 +491,28 @@ public class Client {
             String fileName = entry.getKey();
             HashSet<String> clients = entry.getValue();
             System.out.println("File: " + fileName + ", Clients: " + clients);
+        }
+    }
+
+    private synchronized static ClientInfo getClientInfo(String fileName) {
+        if (clientInfoHashMap.containsKey(fileName)) {
+            HashSet<String> clientSet = clientFiles.get(fileName);
+
+            // Get a random index
+            int randomIndex = ThreadLocalRandom.current().nextInt(clientSet.size());
+
+            // Iterate through the HashSet to find the clientNames at the random index
+            Iterator<String> iterator = clientSet.iterator();
+            String clientName = null;
+            for (int i = 0; i <= randomIndex && iterator.hasNext(); i++) {
+                clientName = iterator.next();
+            }
+
+            System.out.println("Random Client Name from HashSet: " + clientName);
+
+            return clientInfoHashMap.get(clientName);
+        } else {
+            return null;
         }
     }
 
