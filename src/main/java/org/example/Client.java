@@ -177,99 +177,101 @@ public class Client {
                 // Deserialize the received data into a Message
                 Message receivedMessage = Message.deserialize(receivePacket.getData());
 
-                if (receivedMessage.getCode() == Code.REGISTERED) {
-                    RegisteredMessage rm = (RegisteredMessage) receivedMessage;
-                    System.out.println("Received from server by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + rm.getCode()
-                            + ", REQ#: " + rm.getReqNo());
-                } else if (receivedMessage.getCode() == Code.REGISTER_DENIED) {
-                    RegisterDeniedMessage rdm = (RegisterDeniedMessage) receivedMessage;
-                    System.out.println("Received from server by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + rdm.getCode()
-                            + ", REQ#: " + rdm.getReqNo()
-                            + ", Reason: " + rdm.getReason());
-                }else if (receivedMessage.getCode() == Code.REMOVED) {
-                    RemovedMessage rm = (RemovedMessage) receivedMessage;
-                    System.out.println("REMOVED received by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + rm.getCode()
-                            + ", REQ#: " + rm.getReqNo());
+                switch (receivedMessage.getCode()) {
+                    case REGISTERED:
+                        RegisteredMessage rm = (RegisteredMessage) receivedMessage;
+                        System.out.println("Received from server by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + rm.getCode()
+                                + ", REQ#: " + rm.getReqNo());
+                        break;
 
-                } else if (receivedMessage.getCode() == Code.REMOVE_DENIED) {
-                    RemoveDeniedMessage rdm = (RemoveDeniedMessage) receivedMessage;
-                    System.out.println("REMOVE-DENIED received by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + rdm.getCode()
-                            + ", REQ#: " + rdm.getReqNo()
-                            + ", Reason: " + rdm.getReason());
+                    case REGISTER_DENIED:
+                        RegisterDeniedMessage rdm = (RegisterDeniedMessage) receivedMessage;
+                        System.out.println("Received from server by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + rdm.getCode()
+                                + ", REQ#: " + rdm.getReqNo()
+                                + ", Reason: " + rdm.getReason());
+                        break;
 
+                    case PUBLISHED:
+                        PublishedMessage pm = (PublishedMessage) receivedMessage;
+                        System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
+                        break;
 
-                } else if (receivedMessage instanceof PublishedMessage) {
-                    System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
-                } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
-                    System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
-                            ": Reason: " + deniedMessage.getReason());
+                    case PUBLISH_DENIED:
+                        PublishDeniedMessage pdm = (PublishDeniedMessage) receivedMessage;
+                        System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
+                                ": Reason: " + pdm.getReason());
+                        break;
 
-                } else if (receivedMessage instanceof UpdateMessage updateMessage) {
-                    // Print the update confirmation message
-                    System.out.println("Your information has just been updated.");
+                    case UPDATE:
+                        UpdateMessage um = (UpdateMessage) receivedMessage;
+                        System.out.println("Your information has just been updated.");
 
-                    HashSet<ClientInfo> clientInfoSet = updateMessage.getClientInfoSet();
+                        HashSet<ClientInfo> clientInfoSet = um.getClientInfoSet();
+                        HashMap<String, ClientInfo> clientInfoHashMap = new HashMap<>();
 
-                    HashMap<String, ClientInfo> clientInfoHashMap = new HashMap<>();
+                        for (ClientInfo clientInfo : clientInfoSet) {
+                            clientInfoHashMap.put(clientInfo.getName(), clientInfo);
+                        }
 
-                    for (ClientInfo clientInfo : clientInfoSet) {
-                        clientInfoHashMap.put(clientInfo.getName(), clientInfo);
-                    }
+                        // Update client's internal state with the latest information
+                        // about registered clients and their available files
+                        //problem area
+                        // For example:
+                        updateInternalState(clientInfoHashMap);
+                        updateClientFiles();
+                        break;
 
-                    // Update client's internal state with the latest information
-                    // about registered clients and their available files
-                    //problem area
-                    // For example:
-                    updateInternalState(clientInfoHashMap);
-                    updateClientFiles();
+                    case FILE_REQ:
+                        FileReqMessage frm = (FileReqMessage) receivedMessage;
+                        System.out.println("Received from server by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + frm.getCode()
+                                + ", REQ#: " + frm.getReqNo()
+                                + ", File Name: " + frm.getFileName());
 
-                } else if (receivedMessage instanceof FileReqMessage fileReqMessage) {
-                    System.out.println("Received from server by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + fileReqMessage.getCode()
-                            + ", REQ#: " + fileReqMessage.getReqNo()
-                            + ", File Name: " + fileReqMessage.getFileName());
+                        executor.submit(() -> handleFileTransfer(frm, receivePacket));
+                        break;
 
-                    executor.submit(() -> handleFileTransfer(fileReqMessage, receivePacket));
-                } else if (receivedMessage instanceof FileConfMessage fileConfMessage) {
-                    System.out.println("Received from server by client "
-                            + Thread.currentThread().getName()
-                            + ": Code: " + fileConfMessage.getCode()
-                            + ", REQ#: " + fileConfMessage.getReqNo()
-                            + ", TCP Port: " + fileConfMessage.getTcpPort());
+                    case FILE_CONF:
+                        FileConfMessage fcm = (FileConfMessage) receivedMessage;
+                        System.out.println("Received from server by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + fcm.getCode()
+                                + ", REQ#: " + fcm.getReqNo()
+                                + ", TCP Port: " + fcm.getTcpPort());
 
-                    executor.submit(() -> receiveFile(receivePacket.getAddress(), fileConfMessage.getTcpPort()));
+                        executor.submit(() -> receiveFile(receivePacket.getAddress(), fcm.getTcpPort()));
+                        break;
 
-                } else {
-                    // Handle other responses or unknown message types
-                    System.out.println("Received an unrecognized message from the server.");
+                    case REMOVED:
+                        RemovedMessage rem = (RemovedMessage) receivedMessage;
+                        System.out.println("REMOVE received by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + rem.getCode()
+                                + ", REQ#: " + rem.getReqNo());
+                        break;
+
+                    case REMOVE_DENIED:
+                        RemoveDeniedMessage rddm = (RemoveDeniedMessage) receivedMessage;
+                        System.out.println("REMOVE-DENIED received by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + rddm.getCode()
+                                + ", REQ#: " + rddm.getReqNo()
+                                + ", Reason: " + rddm.getReason());
+                        break;
+
+                    default:
+                        // Handle other responses or unknown message types
+                        System.out.println("Received an unrecognized message from the server.");
+                        break;
                 }
-//                if (receivedMessage.getCode() == Code.UPDATE_CONFIRMED) {
-//                    UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
-//                    System.out.println("UPDATE confirmed for client "
-//                            + Thread.currentThread().getName()
-//                            + ": Code: " + ucm.getCode()
-//                            + ", REQ#: " + ucm.getReqNo());
-//                } else if (receivedMessage.getCode() == Code.UPDATE_DENIED) {
-//                    UpdateDeniedMessage udm = (UpdateDeniedMessage) receivedMessage;
-//                    System.out.println("UPDATE denied for client "
-//                            + Thread.currentThread().getName()
-//                            + ": Code: " + udm.getCode()
-//                            + ", REQ#: " + udm.getReqNo()
-//                            + ", Reason: " + udm.getReason());
-//                }
-                //
-                // Handle other message types as needed
             }
         }
+
 
         private static String readFileToString(String fileName) throws IOException {
             String filePath = "src" + File.separator
