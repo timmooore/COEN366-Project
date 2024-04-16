@@ -27,20 +27,4 @@ public class PublishMessage extends Message {
         return files;
     }
 
-//    @Override
-//    public byte[] serialize() {
-//        // Assuming a simple serialization to a comma-separated string
-//        String filesString = String.join(";", this.files); // Using semicolon to separate files
-//        String dataString = this.reqNo + "," + this.name + "," + filesString;
-//        return dataString.getBytes();
-//    }
-//
-//    //Create a deserilization class?
-//    public static PublishMessage deserialize(byte[] data) {
-//        String[] parts = new String(data).split(",", 3);
-//        int reqNo = Integer.parseInt(parts[0]);
-//        String name = parts[1];
-//        List<String> files = Arrays.asList(parts[2].split(";"));
-//        return new PublishMessage(reqNo, name, files);
-//    }
 }

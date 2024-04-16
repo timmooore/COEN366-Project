@@ -18,17 +18,4 @@ public class PublishDeniedMessage extends Message {
         return reason;
     }
 
-//    @Override
-//    public byte[] serialize() {
-//        String dataString = this.getCode().getCode() + "," + this.reqNo + "," + this.reason;
-//        return dataString.getBytes();
-//    }
-//
-//     //Create a deserilization class?
-//    public static PublishDeniedMessage deserialize(byte[] data) {
-//        String[] parts = new String(data).split(",", 3);
-//        int reqNo = Integer.parseInt(parts[1]);
-//        String reason = parts[2];
-//        return new PublishDeniedMessage(reqNo, reason);
-//    }
 }
