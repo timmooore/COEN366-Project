@@ -14,7 +14,7 @@ public class Client {
 
     // TODO: Hash each fileName to a List or Set of clientNames hosting that file
     private static final HashMap<String, HashSet<String>> clientFiles = new HashMap<>();
-    private static HashMap<String, ClientInfo> clientInfoSet = new HashMap<>();
+    private static HashMap<String, ClientInfo> clientInfoHashMap = new HashMap<>();
 
     private static final HashSet<String> hostedFiles = new HashSet<>();
 
@@ -177,8 +177,6 @@ public class Client {
                     for (ClientInfo clientInfo : clientInfoSet) {
                         clientInfoHashMap.put(clientInfo.getName(), clientInfo);
                     }
-
-
 
                     // Update client's internal state with the latest information
                     // about registered clients and their available files
@@ -387,7 +385,7 @@ public class Client {
         // clientFiles.clear();
 
         // TODO: (Note) If there are memory issues this might be the cause
-        clientInfoSet = clientInfoMap;
+        clientInfoHashMap = clientInfoMap;
 
         // Iterate through the client info map and update the client files
 //        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
@@ -401,7 +399,7 @@ public class Client {
     }
 
     private synchronized static void updateClientFiles() {
-        for (Map.Entry<String, ClientInfo> entry : clientInfoSet.entrySet()) {
+        for (Map.Entry<String, ClientInfo> entry : clientInfoHashMap.entrySet()) {
             String clientName = entry.getKey();
             ClientInfo clientInfo = entry.getValue();
 
