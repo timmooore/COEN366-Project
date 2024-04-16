@@ -26,6 +26,9 @@ public class Client {
         private final int reqNo; // Request number for this instance of ClientTask
         private final Code code;
         private List<String> filesToPublish; // Only used for PUBLISH
+
+        private List<String> filesToRemove; // Variable to store files to remove
+
         private String fileName;  // For FILE_REQ
         private final DatagramSocket socket;
         private int tcpSocket;  // For FILE_CONF
@@ -41,6 +44,11 @@ public class Client {
             this.code = code;
             this.filesToPublish = null; // Not used for REGISTER/DE_REGISTER
         }
+
+
+
+
+
 
         // Overloaded constructor for PUBLISH with a list of files
         public ClientTask(DatagramSocket socket, String clientName, int reqNo, Code code, List<String> filesToPublish) {
@@ -97,6 +105,17 @@ public class Client {
                     handleUpdateConfirmation("publish");
                     break;
                 }
+
+                //TODO Add Remove Case (Completed, to validate)
+                case REMOVE: {
+                    RemoveMessage removeMessage = new RemoveMessage(reqNo, clientName, filesToRemove);
+                    sendData = removeMessage.serialize();
+                    // Handle update confirmation and print the message
+                    handleUpdateConfirmation("remove");
+                    break;
+                }
+
+
                 case FILE_REQ:
                     // TODO: Get IP address and UDP port of Client by searching for fileName
                     try {
@@ -108,6 +127,8 @@ public class Client {
                     FileReqMessage fileReqMessage = new FileReqMessage(reqNo, fileName);
                     sendData = fileReqMessage.serialize();
                     break;
+
+
                 // Add other cases as necessary
             }
 
@@ -131,6 +152,7 @@ public class Client {
             this.socket = socket;
         }
 
+        //TODO Handle Published, Publish Denied, Removed, Removed-Denied
         @Override
         public void run() {
             while (true) {
@@ -444,7 +466,6 @@ public class Client {
                 scanner.nextLine(); // Consume the newline character left by nextInt()
 
 
-
                 // TODO: chatGPT generated. Test each that they work
                 switch (messageType)  {
                     case 1:
@@ -488,12 +509,10 @@ public class Client {
                         }
                         break;
                     case 0:
-
                         // TODO: Make sure resources are closed  (William: Worked on adding this just need to validate)
-                        // Make sure resources are closed
                         socket.close();
                         scanner.close();
-                        return; // Exit the program
+                        return;
                     default:
                         System.out.println("Invalid message type.");
                 }
@@ -503,5 +522,4 @@ public class Client {
         }
     }
 }
-
 // TODO: (Optional) Might want to do reqNo validation if we have time
