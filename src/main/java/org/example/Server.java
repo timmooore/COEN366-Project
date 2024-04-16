@@ -24,7 +24,7 @@ public class Server {
     private final Logger logger = Logger.getLogger(Server.class.getName());
 
     // TODO: Restore from .json
-    private static final HashMap<String, ClientInfo> registeredClients = new HashMap<>();
+    private static final HashMap<String, ClientInfo> registeredClients = ClientInfoSerializer.loadClientInfoMap();
     //private final Map<String, InetAddress> registeredClients;
     private final Map<String, Set<String>> clientFiles;
 
@@ -95,6 +95,7 @@ public class Server {
                         RegisteredMessage response = new RegisteredMessage(rm.getReqNo());
 
                         // Submit a new UpdateTask
+                        ClientInfoSerializer.serializeClientInfoMap(registeredClients);
                         executor.submit(new UpdateTask());
                         sendResponse(packet, response);
                         logger.info("Sent: Code: " + response.getCode() +
@@ -116,6 +117,7 @@ public class Server {
                     logger.info(msg.toString());
 
                     // Submit a new UpdateTask to update clients
+                    ClientInfoSerializer.serializeClientInfoMap(registeredClients);
                     executor.submit(new UpdateTask());
                     break;
                 }
@@ -174,6 +176,7 @@ public class Server {
             sendResponse(packet, response);
 
             // Trigger update
+            ClientInfoSerializer.serializeClientInfoMap(registeredClients);
             executor.submit(new UpdateTask());
         } else {
             // Client not registered, send PUBLISH-DENIED
@@ -195,6 +198,8 @@ public class Server {
             sendResponse(packet, response);
 
             // Trigger update
+            ClientInfoSerializer.serializeClientInfoMap(registeredClients);
+
             executor.submit(new UpdateTask());
         } else {
             // Client not registered, handle error
