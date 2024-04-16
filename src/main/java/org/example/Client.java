@@ -208,23 +208,38 @@ public class Client {
                     // Handle other responses or unknown message types
                     System.out.println("Received an unrecognized message from the server.");
                 }
-
-//                if (receivedMessage.getCode() == Code.UPDATE_CONFIRMED) {
-//                    UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
-//                    System.out.println("UPDATE confirmed for client "
-//                            + Thread.currentThread().getName()
-//                            + ": Code: " + ucm.getCode()
-//                            + ", REQ#: " + ucm.getReqNo());
-//                } else if (receivedMessage.getCode() == Code.UPDATE_DENIED) {
-//                    UpdateDeniedMessage udm = (UpdateDeniedMessage) receivedMessage;
-//                    System.out.println("UPDATE denied for client "
-//                            + Thread.currentThread().getName()
-//                            + ": Code: " + udm.getCode()
-//                            + ", REQ#: " + udm.getReqNo()
-//                            + ", Reason: " + udm.getReason());
-//               }
-                // 
-                // Handle other message types as needed
+                if (receivedMessage.getCode() == Code.CONTACT_UPDATE) {
+                    UpdateContactMessage ucm = (UpdateContactMessage) receivedMessage;
+                    System.out.println("UPDATE contact for client " + ucm.getName() +
+                            ": REQ#: " + ucm.getReqNo() +
+                            ", IP Address: " + ucm.getIpAddress() +
+                            ", UDP Socket: " + ucm.getUdpSocket());
+                    if (!clientFiles.containsKey(ucm.getName())) {
+                        // Name does not exist, send denial message
+                        String reason = "Name does not exist";
+                    } else {
+                        // Name exists, process the update
+                        // Send confirmation message
+                        UpdateConfirmedMessage confirmationMessage = new UpdateConfirmedMessage(ucm.getReqNo(), ucm.getName(), ucm.getIpAddress(), ucm.getUdpSocket());
+                    }
+                }else if (receivedMessage.getCode() == Code.CONTACT_CONFIRMED) {
+                    UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
+                    System.out.println("UPDATE confirmed for client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + ucm.getCode()
+                            + ", REQ#: " + ucm.getReqNo()
+                            + ", IP Address: " + ucm.getIpAddress() +
+                            ", UDP Socket: " + ucm.getUdpSocket());
+                } else if (receivedMessage.getCode() == Code.CONTACT_DENIED) {
+                    UpdateDeniedMessage udm = (UpdateDeniedMessage) receivedMessage;
+                    System.out.println("UPDATE denied for client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + udm.getCode()
+                            + ", REQ#: " + udm.getReqNo()
+                            + ", Reason: " + udm.getReason());
+               } else {
+                System.out.println("Received an unrecognized message from the server.");
+            }
             }
         }
 
@@ -233,6 +248,7 @@ public class Client {
         // with  update confirmed with the following parameters.
         // if the server denies, it would be say update denied and print the parameters above too.
         // this is clients updating their  information, mobility
+
         private static String readFileToString(String fileName) throws IOException {
             String filePath = "src" + File.separator
                     + "main" + File.separator

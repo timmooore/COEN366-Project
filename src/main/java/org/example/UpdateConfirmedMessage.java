@@ -9,7 +9,7 @@ public class UpdateConfirmedMessage extends Message {
     private final int udpSocket;
 
     public UpdateConfirmedMessage(int reqNo, String name, InetAddress ipAddress, int udpSocket) {
-        super(Code.CONTACT_CONFRIMED);
+        super(Code.CONTACT_CONFIRMED);
 
         this.reqNo = reqNo;
         this.name = name;

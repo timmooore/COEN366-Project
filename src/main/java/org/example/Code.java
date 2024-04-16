@@ -22,7 +22,7 @@ public enum Code {
    //
     CONTACT_UPDATE(19),
     CONTACT_DENIED(20),
-    CONTACT_CONFRIMED(21);
+    CONTACT_CONFIRMED(21);
 
     // Add more message codes as needed
 
