@@ -208,6 +208,7 @@ public class Client {
                     // Handle other responses or unknown message types
                     System.out.println("Received an unrecognized message from the server.");
                 }
+
 //                if (receivedMessage.getCode() == Code.UPDATE_CONFIRMED) {
 //                    UpdateConfirmedMessage ucm = (UpdateConfirmedMessage) receivedMessage;
 //                    System.out.println("UPDATE confirmed for client "
@@ -221,12 +222,17 @@ public class Client {
 //                            + ": Code: " + udm.getCode()
 //                            + ", REQ#: " + udm.getReqNo()
 //                            + ", Reason: " + udm.getReason());
-//                }
+//               }
                 // 
                 // Handle other message types as needed
             }
         }
 
+        //2.5. TAsks- Update contact will get the RQ#, NAme, ip address, udpsocket,
+        // This message is sent to the serve, the server can accept the update and reply the
+        // with  update confirmed with the following parameters.
+        // if the server denies, it would be say update denied and print the parameters above too.
+        // this is clients updating their  information, mobility
         private static String readFileToString(String fileName) throws IOException {
             String filePath = "src" + File.separator
                     + "main" + File.separator
