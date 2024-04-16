@@ -141,7 +141,7 @@ public class Server {
 //                    handleUpdateDenied((UpdateDeniedMessage) receivedMessage);
 //                    // Handle UPDATE_DENIED message
 //                    break;
-                }
+//                }
                 default: {
                     logger.warning("Received an unrecognized message with code: " + receivedMessage.getCode());
                     break;
@@ -161,8 +161,6 @@ public class Server {
                 ": REQ#: " + deniedMessage.getReqNo() +
                 ", Reason: " + deniedMessage.getReason());
     }
-
-
 
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
