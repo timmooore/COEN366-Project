@@ -32,6 +32,16 @@ import java.util.Set;
         public Set<String> getFiles() {
             return files;
         }
+
+        @Override
+        public String toString() {
+            return "ClientInfo{" +
+                    "name='" + name + '\'' +
+                    ", ipAddress=" + ipAddress +
+                    ", udpPort=" + udpPort +
+                    ", files=" + files +
+                    '}';
+        }
     }
 
 

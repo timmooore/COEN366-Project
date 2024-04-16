@@ -477,6 +477,11 @@ public class Client {
 
         // TODO: (Note) If there are memory issues this might be the cause
         clientInfoHashMap = clientInfoMap;
+        for(Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
+            String clientName = entry.getKey();
+            ClientInfo clientInfo = entry.getValue();
+            System.out.println("Client " + clientName + " ClientInfo: " + clientInfo.toString());
+        }
 
         // Iterate through the client info map and update the client files
 //        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
@@ -518,7 +523,8 @@ public class Client {
     }
 
     private synchronized static ClientInfo getClientInfo(String fileName) {
-        if (clientInfoHashMap.containsKey(fileName)) {
+        if (clientFiles.containsKey(fileName)) {
+            System.out.println("clientInfoHashMap contains file: " + fileName);
             HashSet<String> clientSet = clientFiles.get(fileName);
 
             // Get a random index
@@ -528,6 +534,7 @@ public class Client {
             Iterator<String> iterator = clientSet.iterator();
             String clientName = null;
             for (int i = 0; i <= randomIndex && iterator.hasNext(); i++) {
+                System.out.println("Iterator" + fileName);
                 clientName = iterator.next();
             }
 
