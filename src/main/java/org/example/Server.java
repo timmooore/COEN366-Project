@@ -159,18 +159,24 @@ public class Server {
                 ", Reason: " + deniedMessage.getReason());
     }
 
-    
+
+
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
         if (registeredClients.containsKey(pm.getName())) {
-            // Client is registered, update file list
+            ClientInfo clientInfo = registeredClients.get(pm.getName());
 
-            // TODO: Check this logic for new
-            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
-            clientFiles.get(pm.getName()).addAll(pm.getFiles());
-    
+            clientInfo.getFiles().addAll(pm.getFiles());
+
+//            // Client is registered, update file list
+//            clientFiles.putIfAbsent(pm.getName(), new HashSet<>());
+//            clientFiles.get(pm.getName()).addAll(pm.getFiles());
+
             // Send PUBLISHED message
             PublishedMessage response = new PublishedMessage(pm.getReqNo());
             sendResponse(packet, response);
+
+            // Trigger update
+            executor.submit(new UpdateTask());
         } else {
             // Client not registered, send PUBLISH-DENIED
             PublishDeniedMessage response = new PublishDeniedMessage(pm.getReqNo(), "Client not registered");
@@ -189,12 +195,16 @@ public class Server {
             // Send REMOVED message
             RemovedMessage response = new RemovedMessage(rm.getReqNo());
             sendResponse(packet, response);
+
+            // Trigger update
+            executor.submit(new UpdateTask());
         } else {
             // Client not registered, handle error
             RemoveDeniedMessage response = new RemoveDeniedMessage(rm.getReqNo(), "Client not registered");
             sendResponse(packet, response);
         }
     }
+
 
     private void sendResponse(DatagramPacket packet, Message response) {
         byte[] responseData = response.serialize();
@@ -207,12 +217,16 @@ public class Server {
         }
     }
 
-
     public void stop() {
         running = false;
         socket.close();
         logger.info("Server stopped.");
     }
+
+
+
+
+
 
     private class UpdateTask extends TimerTask {
         @Override
@@ -273,99 +287,6 @@ public class Server {
             }
         }
     }
-//
-//    private static class IncomingMessageHandler implements Runnable {
-//        private final DatagramSocket socket;
-//
-//        public IncomingMessageHandler(DatagramSocket socket) {
-//            this.socket = socket;
-//        }
-//
-//        @Override
-//        public void run() {
-//            while (true) {
-//                // Receive incoming message
-//                byte[] receiveData = new byte[BUFFER_SIZE];
-//                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-//                try {
-//                    socket.receive(receivePacket);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                // Deserialize received message
-//                Message receivedMessage = Message.deserialize(receivePacket.getData());
-//
-//                // Handle different message types
-//                if (receivedMessage.getCode() == Code.CONTACT_UPDATE) {
-//                    handleContactUpdate((UpdateContactMessage) receivedMessage);
-//                } else if (receivedMessage.getCode() == Code.CONTACT_CONFIRMED) {
-//                    handleContactConfirmed((UpdateConfirmedMessage) receivedMessage);
-//                } else if (receivedMessage.getCode() == Code.CONTACT_DENIED) {
-//                    handleContactDenied((UpdateDeniedMessage) receivedMessage);
-//                } else {
-//                    System.out.println("Received an unrecognized message from the client.");
-//                }
-//            }
-//        }
-//
-//        // Method to handle contact update request from client
-//        private void handleContactUpdate(UpdateContactMessage updateMessage) {
-//            String clientName = updateMessage.getName();
-//            if (!clientInfoMap.containsKey(clientName)) {
-//                // Name does not exist, send denial message
-//                String reason = "Name does not exist";
-//                UpdateDeniedMessage denialMessage = new UpdateDeniedMessage(updateMessage.getReqNo(), clientName, reason);
-//                sendResponse(denialMessage, updateMessage.getIpAddress(), updateMessage.getUdpSocket());
-//            } else {
-//                // Name exists, process the update
-//                // Send confirmation message
-//                UpdateConfirmedMessage confirmationMessage = new UpdateConfirmedMessage(updateMessage.getReqNo(), clientName);
-//                sendResponse(confirmationMessage, updateMessage.getIpAddress(), updateMessage.getUdpSocket());
-//            }
-//        }
-//
-//        // Method to handle contact confirmed response from client
-//        private void handleContactConfirmed(UpdateConfirmedMessage confirmedMessage) {
-//            System.out.println("UPDATE confirmed for client " + confirmedMessage.getName() +
-//                    ": REQ#: " + confirmedMessage.getReqNo());
-//        }
-//
-//        // Method to handle contact denied response from client
-//        private void handleContactDenied(UpdateDeniedMessage deniedMessage) {
-//            System.out.println("UPDATE denied for client " + deniedMessage.getName() +
-//                    ": REQ#: " + deniedMessage.getReqNo() +
-//                    ", Reason: " + deniedMessage.getReason());
-//        }
-//
-//        // Method to send response message to the client
-//        private void sendResponse(Message responseMessage, InetAddress ipAddress, int udpSocket) {
-//            byte[] sendData = responseMessage.serialize();
-//            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, udpSocket);
-//            try {
-//                socket.send(sendPacket);
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
-//
-//    // Main method to start the server
-//    public static void main(String[] args) {
-//        try (DatagramSocket socket = new DatagramSocket(SERVER_PORT)) {
-//            // Start the incoming message handler in a separate thread
-//            new Thread(new IncomingMessageHandler(socket)).start();
-//            System.out.println("Server started...");
-//
-//            // Keep the server running
-//            while (true) {
-//                // Server will keep listening for incoming messages
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//}
-
 
     public static void main(String[] args) {
         int port = 3000; // Example port number
