@@ -22,17 +22,27 @@ public class Client {
     private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     private static class ClientTask implements Runnable {
-        private final String clientName;
-        private final int reqNo; // Request number for this instance of ClientTask
-        private final Code code;
-        private List<String> filesToPublish; // Only used for PUBLISH
-        private String fileName;  // For FILE_REQ
+        //private final String clientName;
+        //private final int reqNo; // Request number for this instance of ClientTask
+        //private final Code code;
+        //private List<String> filesToPublish; // Only used for PUBLISH
+        //private String fileName;  // For FILE_REQ
+        private final Message message;  // Store the message object
         private final DatagramSocket socket;
         private int tcpSocket;  // For FILE_CONF
 
 
         // TODO: This might get hard to manage as more messages are added, esp. if
-        //       the signatures are the same
+        //       the signatures are the same -- UPDATE Added single constructor
+
+        public ClientTask(DatagramSocket socket, Message message) {
+            this.socket = socket;
+            this.message = message;
+        }
+
+
+
+        /*
         // Constructor for REGISTER and DE_REGISTER
         public ClientTask(DatagramSocket socket, String clientName, int reqNo, Code code) {
             this.socket = socket;
@@ -41,6 +51,8 @@ public class Client {
             this.code = code;
             this.filesToPublish = null; // Not used for REGISTER/DE_REGISTER
         }
+
+
 
         // Overloaded constructor for PUBLISH with a list of files
         public ClientTask(DatagramSocket socket, String clientName, int reqNo, Code code, List<String> filesToPublish) {
@@ -59,9 +71,27 @@ public class Client {
             this.code = code;
             this.fileName = fileName;
         }
+         */
 
         @Override
         public void run() {
+            try {
+                byte[] sendData = message.serialize();
+                InetAddress destinationAddress = InetAddress.getByName(SERVER_IP);
+                int destinationPort = SERVER_PORT; // Default port, adjust based on message type if needed
+
+                if (message instanceof FileReqMessage) {
+                    destinationPort = 4000; // Special port for FILE_REQ if necessary
+                }
+
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
+                socket.send(sendPacket);
+                System.out.println(message.getCode() + " message sent to server by client " + Thread.currentThread().getName());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            /*
             InetAddress destinationAddress;
             int destinationPort = SERVER_PORT;
             try {
@@ -119,7 +149,7 @@ public class Client {
                     throw new RuntimeException(e);
                 }
                 System.out.println(code + " message sent to server by client " + Thread.currentThread().getName());
-            }
+            }*/
         }
     }
 
@@ -427,81 +457,69 @@ public class Client {
         // TODO: Change once file transfer testing complete
         try (DatagramSocket socket = (args.length > 0 ? new DatagramSocket(4000) : new DatagramSocket())) {
             System.out.println("Port: " + socket.getLocalPort());
-            // Start the incoming request handler in a separate thread
             new Thread(new IncomingMessageHandler(socket)).start();
-
-            // Prompt user for the client name
-            System.out.println("Enter your Client name: ");
             Scanner scanner = new Scanner(System.in);
-
+            System.out.println("Enter your Client name: ");
             name = scanner.nextLine();
 
             int reqNo = 1;
 
+            // TODO: chatGPT generated. Test each that they work
             while (true) {
-                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 5 = REMOVE, 0 = EXIT): ");
+                System.out.println("Enter message type (1 = REGISTER, 2 = DE_REGISTER, 3 = PUBLISH, 4 = FILE_REQ, 5 = REMOVE, 10 = Multiple registers, 0 = EXIT): ");
                 int messageType = scanner.nextInt();
-                scanner.nextLine(); // Consume the newline character left by nextInt()
+                scanner.nextLine(); // Consume the newline character
 
-
-
-                // TODO: chatGPT generated. Test each that they work
-                switch (messageType)  {
+                Message message = null;
+                switch (messageType) {
                     case 1:
-                        new Thread(new ClientTask(socket, name, reqNo++, Code.REGISTER)).start();
+                        message = new RegisterMessage(reqNo++, name, InetAddress.getByName(SERVER_IP), socket.getLocalPort());
                         break;
                     case 2:
-                        new Thread(new ClientTask(socket, name, reqNo++, Code.DE_REGISTER)).start();
+                        message = new DeRegisterMessage(reqNo++, name);
                         break;
                     case 3:
                         System.out.println("Enter filenames to publish (comma-separated): ");
-                        String publishInput = scanner.nextLine();
-                        List<String> filesToPublish = Arrays.asList(publishInput.split(","));
-                        new Thread(new ClientTask(socket, name, reqNo++, Code.PUBLISH, filesToPublish)).start();
+                        List<String> filesToPublish = Arrays.asList(scanner.nextLine().split(","));
+                        message = new PublishMessage(reqNo++, name, filesToPublish);
                         break;
                     case 4:
                         System.out.println("Enter filename for FILE_REQ: ");
-                        String fileName = scanner.nextLine().trim();
-                        new Thread(new ClientTask(socket, name, reqNo++, Code.FILE_REQ, fileName)).start();
+                        String fileName = scanner.nextLine();
+                        message = new FileReqMessage(reqNo++, fileName);
                         break;
                     case 5:
                         System.out.println("Enter filenames to remove (comma-separated): ");
-                        String filesInput = scanner.nextLine();
-                        List<String> filesToRemove = Arrays.asList(filesInput.split(","));
-                        new Thread(new ClientTask(socket, name, reqNo++, Code.REMOVE, filesToRemove)).start();
-
-                        //yimika added
-                        // Handle update confirmation and print the message
-                        handleUpdateConfirmation("publish");
+                        List<String> filesToRemove = Arrays.asList(scanner.nextLine().split(","));
+                        message = new RemoveMessage(reqNo++, name, filesToRemove);
                         break;
                     case 10:
-                        // Register clients with names Client1 -> Client5
+                        // Handle multiple registrations
                         for (int i = 1; i <= 5; i++) {
                             String tmpClientName = name + i;
-                            try (DatagramSocket tmpSocket = new DatagramSocket(0)) {
-                                Thread t = new Thread(new ClientTask(tmpSocket, tmpClientName, reqNo++, Code.REGISTER));
-                                t.start();
-                                t.join();
-                            } catch (IOException | InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
+                            Message tmpMessage = new RegisterMessage(reqNo++, tmpClientName, InetAddress.getByName(SERVER_IP), socket.getLocalPort());
+                            new Thread(new ClientTask(socket, tmpMessage)).start();
                         }
-                        break;
+                        continue; // Continue to the next iteration of the loop
                     case 0:
 
                         // TODO: Make sure resources are closed  (William: Worked on adding this just need to validate)
-                        // Make sure resources are closed
                         socket.close();
                         scanner.close();
-                        return; // Exit the program
+                        System.exit(0); // Exit the program
                     default:
                         System.out.println("Invalid message type.");
+                }
+
+                if (message != null) {
+                    new Thread(new ClientTask(socket, message)).start();
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
 }
 
 // TODO: (Optional) Might want to do reqNo validation if we have time
