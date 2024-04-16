@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Client {
-    public static final String SERVER_IP = "192.168.2.12";
+    public static final String SERVER_IP = "172.30.66.234";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
     private static String name;
