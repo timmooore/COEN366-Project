@@ -14,7 +14,7 @@ public class Client {
 
     // TODO: Hash each fileName to a List or Set of clientNames hosting that file
     private static final HashMap<String, HashSet<String>> clientFiles = new HashMap<>();
-    private static final HashMap<String, ClientInfo> clientInfoSet = new HashMap<>();
+    private static HashMap<String, ClientInfo> clientInfoSet = new HashMap<>();
 
     private static final HashSet<String> hostedFiles = new HashSet<>();
 
@@ -166,19 +166,26 @@ public class Client {
                     System.out.println("PUBLISH-DENIED received by client " + Thread.currentThread().getName() +
                             ": Reason: " + deniedMessage.getReason());
 
-                } else if (receivedMessage instanceof UpdateMessage) {
+                } else if (receivedMessage instanceof UpdateMessage updateMessage) {
                     // Print the update confirmation message
                     System.out.println("Your information has just been updated.");
 
-                    UpdateMessage updateMessage = (UpdateMessage) receivedMessage;
-
                     HashSet<ClientInfo> clientInfoSet = updateMessage.getClientInfoSet();
+
+                    HashMap<String, ClientInfo> clientInfoHashMap = new HashMap<>();
+
+                    for (ClientInfo clientInfo : clientInfoSet) {
+                        clientInfoHashMap.put(clientInfo.getName(), clientInfo);
+                    }
+
+
 
                     // Update client's internal state with the latest information
                     // about registered clients and their available files
                     //problem area
                     // For example:
-                    // updateInternalState(clientInfoSet);
+                    updateInternalState(clientInfoHashMap);
+                    updateClientFiles();
 
                 } else if (receivedMessage instanceof FileReqMessage fileReqMessage) {
                     System.out.println("Received from server by client "
@@ -375,26 +382,46 @@ public class Client {
     }
 
     // Update the client's internal state with the latest information
-    private static void updateInternalState(Map<String, ClientInfo> clientInfoMap) {
+    private static synchronized void updateInternalState(HashMap<String, ClientInfo> clientInfoMap) {
         // Clear existing client files
-        clientFiles.clear();
+        // clientFiles.clear();
+
+        // TODO: (Note) If there are memory issues this might be the cause
+        clientInfoSet = clientInfoMap;
 
         // Iterate through the client info map and update the client files
-        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
+//        for (Map.Entry<String, ClientInfo> entry : clientInfoMap.entrySet()) {
+//            String clientName = entry.getKey();
+//            ClientInfo clientInfo = entry.getValue();
+//            Set<String> files = clientInfo.getFiles();
+//
+//            // Update client files
+//            clientFiles.put(clientName, new HashSet<>(files));
+//        }
+    }
+
+    private synchronized static void updateClientFiles() {
+        for (Map.Entry<String, ClientInfo> entry : clientInfoSet.entrySet()) {
             String clientName = entry.getKey();
             ClientInfo clientInfo = entry.getValue();
-            Set<String> files = clientInfo.getFiles();
 
-            // Update client files
-            clientFiles.put(clientName, new HashSet<>(files));
+            for (String fileName : clientInfo.getFiles()) {
+                if (!clientFiles.containsKey(fileName)) {
+                    clientFiles.put(fileName, new HashSet<>());
+                }
+
+                Set<String> hostingClients = clientFiles.get(fileName);
+
+                hostingClients.add(clientName);
+            }
         }
 
         // Print updated client files (for demonstration)
         System.out.println("Updated client files:");
         for (Map.Entry<String, HashSet<String>> entry : clientFiles.entrySet()) {
-            String clientName = entry.getKey();
-            Set<String> files = entry.getValue();
-            System.out.println("Client: " + clientName + ", Files: " + files);
+            String fileName = entry.getKey();
+            HashSet<String> clients = entry.getValue();
+            System.out.println("File: " + fileName + ", Clients: " + clients);
         }
     }
 
