@@ -13,6 +13,12 @@ public class Client {
     private static final int BUFFER_SIZE = 1024;
     private static String name;
 
+    private static final String FILE_PATH = "src" + File.separator
+            + "main" + File.separator
+            + "java" + File.separator
+            + "org" + File.separator
+            + "example" + File.separator;
+
     // TODO: Hash each fileName to a List or Set of clientNames hosting that file
     private static final HashMap<String, HashSet<String>> clientFiles = new HashMap<>();
     private static HashMap<String, ClientInfo> clientInfoHashMap = new HashMap<>();
@@ -395,52 +401,59 @@ public class Client {
                 InetAddress destinationAddress = receivedPacket.getAddress();
                 int destinationPort = receivedPacket.getPort();
 
-                String fileName = fileReqMessage.getFileName();
-
-
-                FileConfMessage fileConfMessage = new FileConfMessage(fileReqMessage.getReqNo(), tcpPort);
-                byte[] sendData = fileConfMessage.serialize();
-
+                byte[] sendData;
                 DatagramPacket sendPacket;
 
-                if (sendData != null) {
-                    sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
-                    try {
-                        socket.send(sendPacket);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    System.out.println(Code.FILE_CONF + " message sent to server by client " + Thread.currentThread().getName());
+                String fileName = fileReqMessage.getFileName();
 
-                    Socket peerSocket = tcpServerSocket.accept();
-                    OutputStream outputStream = peerSocket.getOutputStream();
+                if (clientFiles.get(fileName).contains(Client.name)) {
+                    String filePath = FILE_PATH + fileName;
+                    File file = new File(filePath);
 
-                    try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream)) {
-                        // Split the requested file into chunks
-                        String fileText = readFileToString(fileReqMessage.getFileName());
-                        List<String> chunks = splitIntoChunks(fileText, 200);
+                    if (!file.exists()) {
+                        // TODO: Send file error
+                    } else {
+                        FileConfMessage fileConfMessage = new FileConfMessage(fileReqMessage.getReqNo(), tcpPort);
+                        sendData = fileConfMessage.serialize();
 
-                        int index = 0;
-
-                        for (String chunk : chunks) {
-                            if (index == chunks.size() - 1) {
-                                // Last chunk
-                                FileEndMessage fileEndMessage = new FileEndMessage(fileReqMessage.getReqNo(),
-                                        fileReqMessage.getFileName(), index, chunk);
-                                objectOutputStream.writeObject(fileEndMessage);
-                            } else {
-                                FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
-                                        fileReqMessage.getFileName(), index, chunk);
-                                objectOutputStream.writeObject(fileMessage);
+                        if (sendData != null) {
+                            sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
+                            try {
+                                socket.send(sendPacket);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
                             }
-                            ++index;
+                            System.out.println(Code.FILE_CONF + " message sent to server by client " + Thread.currentThread().getName());
+
+                            Socket peerSocket = tcpServerSocket.accept();
+                            OutputStream outputStream = peerSocket.getOutputStream();
+
+                            try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream)) {
+                                // Split the requested file into chunks
+                                String fileText = readFileToString(fileReqMessage.getFileName());
+                                List<String> chunks = splitIntoChunks(fileText, 200);
+
+                                int index = 0;
+
+                                for (String chunk : chunks) {
+                                    if (index == chunks.size() - 1) {
+                                        // Last chunk
+                                        FileEndMessage fileEndMessage = new FileEndMessage(fileReqMessage.getReqNo(),
+                                                fileReqMessage.getFileName(), index, chunk);
+                                        objectOutputStream.writeObject(fileEndMessage);
+                                    } else {
+                                        FileMessage fileMessage = new FileMessage(fileReqMessage.getReqNo(),
+                                                fileReqMessage.getFileName(), index, chunk);
+                                        objectOutputStream.writeObject(fileMessage);
+                                    }
+                                    ++index;
+                                }
+                                System.out.println("NumChunksSent: " + index);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
-                        System.out.println("NumChunksSent: " + index);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
                     }
-
-
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
