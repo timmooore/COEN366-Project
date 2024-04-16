@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Client {
-    public static final String SERVER_IP = "192.168.2.12";
+    public static final String SERVER_IP = "172.30.66.234";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
     private static String name;
@@ -541,12 +541,28 @@ public class Client {
 
     public static void main(String[] args) {
         // TODO: Change once file transfer testing complete
-        InetAddress localHost;
+        InetAddress localHost = null;
         try {
-            localHost = InetAddress.getLocalHost();
-            System.out.println(localHost.getHostAddress());
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
+            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+
+            while (networkInterfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = networkInterfaces.nextElement();
+
+                if (!networkInterface.isLoopback() && networkInterface.isUp()) {
+                    Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+
+                    while (addresses.hasMoreElements()) {
+                        InetAddress address = addresses.nextElement();
+                        if (address instanceof Inet4Address) {
+                            localHost = address;
+                            System.out.println("IPv4 Address: " + address.getHostAddress());
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            e.printStackTrace();
         }
 
         try (DatagramSocket socket = (args.length > 0 ? new DatagramSocket(4000) : new DatagramSocket(0, localHost))) {
