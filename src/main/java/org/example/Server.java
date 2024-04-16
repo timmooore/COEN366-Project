@@ -160,11 +160,14 @@ public class Server {
 
     private void handleRemove(RemoveMessage rm, DatagramPacket packet) {
         if (registeredClients.containsKey(rm.getName())) {
-            // Client is registered, remove files from the list
-            Set<String> files = clientFiles.getOrDefault(rm.getName(), new HashSet<>());
-            // files.removeAll(rm.getFiles());
-            rm.getFiles().forEach(files::remove);  // IntelliJ suggested change
-            clientFiles.put(rm.getName(), files);
+            rm.getFiles().forEach(registeredClients.get(rm.getName()).getFiles()::remove);
+
+//            // Client is registered, remove files from the list
+//            Set<String> files = clientFiles.getOrDefault(rm.getName(), new HashSet<>());
+//
+//            // files.removeAll(rm.getFiles());
+//            rm.getFiles().forEach(files::remove);  // IntelliJ suggested change
+//            clientFiles.put(rm.getName(), files);
 
             // Send REMOVED message
             RemovedMessage response = new RemovedMessage(rm.getReqNo());

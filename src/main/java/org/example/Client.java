@@ -446,7 +446,10 @@ public class Client {
 //        }
     }
 
+
     private synchronized static void updateClientFiles() {
+        clientFiles.clear();
+
         for (Map.Entry<String, ClientInfo> entry : clientInfoHashMap.entrySet()) {
             String clientName = entry.getKey();
             ClientInfo clientInfo = entry.getValue();
@@ -456,7 +459,7 @@ public class Client {
                     clientFiles.put(fileName, new HashSet<>());
                 }
 
-                Set<String> hostingClients = clientFiles.get(fileName);
+                HashSet<String> hostingClients = clientFiles.get(fileName);
 
                 hostingClients.add(clientName);
             }
@@ -537,7 +540,6 @@ public class Client {
             throw new RuntimeException(e);
         }
     }
-
 }
 
 // TODO: (Optional) Might want to do reqNo validation if we have time
