@@ -132,34 +132,38 @@ public class Server {
                     handleRemove((RemoveMessage) receivedMessage, packet);
                     // TODO: Update clients here on in handlePublish
                     break;
-                case UPDATE_CONTACT: {
-                    handleUpdateConfirmed((UpdateConfirmedMessage) receivedMessage);
+                case UPDATE_CONTACT:
+                    handleUpdateContact((UpdateContactMessage) receivedMessage, packet);
                     // Handle UPDATE_CONFIRMED message
                     break;
-                }
-//                case CONTACT_DENIED: {
-//                    handleUpdateDenied((UpdateDeniedMessage) receivedMessage);
-//                    // Handle UPDATE_DENIED message
-//                    break;
-//                }
-                default: {
+
+                default:
                     logger.warning("Received an unrecognized message with code: " + receivedMessage.getCode());
                     break;
-                }
+
             }
         }
     }
 
-    private void handleUpdateConfirmed(UpdateConfirmedMessage confirmedMessage) {
-        logger.info("UPDATE confirmed for client " + confirmedMessage.getName() +
-                ": REQ#: " + confirmedMessage.getReqNo());
-    }
+    private void handleUpdateContact(UpdateContactMessage ucm, DatagramPacket packet) {
+        logger.info("Received: UPDATE-CONTACT for client " + ucm.getName() +
+                ": REQ#: " + ucm.getReqNo() +
+                ", IP Address: " + ucm.getIpAddress() +
+                ", UDP Socket: " + ucm.getUdpSocket());
 
-    // Handle UPDATE_DENIED message
-    private void handleUpdateDenied(UpdateDeniedMessage deniedMessage) {
-        logger.warning("UPDATE denied for client " + deniedMessage.getName() +
-                ": REQ#: " + deniedMessage.getReqNo() +
-                ", Reason: " + deniedMessage.getReason());
+        if (!registeredClients.containsKey(ucm.getName())) {
+            // Name does not exist, send denial message
+            String reason = "Name does not exist";
+
+            UpdateDeniedMessage udm = new UpdateDeniedMessage(ucm.getReqNo(), ucm.getName(), reason);
+            sendResponse(packet, udm);
+        } else {
+            // Name exists, process the update
+            // Send confirmation message
+            UpdateConfirmedMessage updateConfirmedMessage = new UpdateConfirmedMessage(
+                    ucm.getReqNo(), ucm.getName(), ucm.getIpAddress(), ucm.getUdpSocket());
+            sendResponse(packet, updateConfirmedMessage);
+        }
     }
 
     private void handlePublish(PublishMessage pm, DatagramPacket packet) {
