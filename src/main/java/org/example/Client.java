@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Client {
-    public static final String SERVER_IP = "localhost";
+    public static final String SERVER_IP = "192.168.2.12";
     public static final int SERVER_PORT = 3000;
     private static final int BUFFER_SIZE = 1024;
     private static String name;
@@ -476,7 +476,15 @@ public class Client {
 
     public static void main(String[] args) {
         // TODO: Change once file transfer testing complete
-        try (DatagramSocket socket = (args.length > 0 ? new DatagramSocket(4000) : new DatagramSocket())) {
+        InetAddress localHost;
+        try {
+            localHost = InetAddress.getLocalHost();
+            System.out.println(localHost.getHostAddress());
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (DatagramSocket socket = (args.length > 0 ? new DatagramSocket(4000) : new DatagramSocket(0, localHost))) {
             System.out.println("Port: " + socket.getLocalPort());
             new Thread(new IncomingMessageHandler(socket)).start();
             Scanner scanner = new Scanner(System.in);
