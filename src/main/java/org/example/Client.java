@@ -433,6 +433,19 @@ public class Client {
 
                     if (!file.exists()) {
                         // TODO: Send file error
+                        String reason = "Host no longer has file " + fileName;
+                        FileErrorMessage fileErrorMessage = new FileErrorMessage(fileReqMessage.getReqNo(), reason);
+
+                        sendData = fileErrorMessage.serialize();
+                        if (sendData != null) {
+                            sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
+                            try {
+                                socket.send(sendPacket);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            System.out.println(Code.FILE_ERROR + " message sent to peer by client " + Thread.currentThread().getName());
+                        }
                     } else {
                         FileConfMessage fileConfMessage = new FileConfMessage(fileReqMessage.getReqNo(), tcpPort);
                         sendData = fileConfMessage.serialize();
@@ -474,6 +487,20 @@ public class Client {
                                 throw new RuntimeException(e);
                             }
                         }
+                    }
+                } else {
+                    String reason = "Client is not hosting the requested file " + fileName;
+                    FileErrorMessage fileErrorMessage = new FileErrorMessage(fileReqMessage.getReqNo(), reason);
+
+                    sendData = fileErrorMessage.serialize();
+                    if (sendData != null) {
+                        sendPacket = new DatagramPacket(sendData, sendData.length, destinationAddress, destinationPort);
+                        try {
+                            socket.send(sendPacket);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        System.out.println(Code.FILE_ERROR + " message sent to peer by client " + Thread.currentThread().getName());
                     }
                 }
             } catch (IOException e) {
