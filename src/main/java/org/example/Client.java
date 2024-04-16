@@ -241,7 +241,7 @@ public class Client {
             }
         }
 
-        //2.5. TAsks- Update contact will get the RQ#, NAme, ip address, udpsocket,
+        //2.5. TAsks- Update contact will get the RQ#, Name, ip address, udpsocket,
         // This message is sent to the serve, the server can accept the update and reply the
         // with  update confirmed with the following parameters.
         // if the server denies, it would be say update denied and print the parameters above too.
