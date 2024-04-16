@@ -17,7 +17,7 @@ import java.util.*;
 
 public class Server {
     private static final int BUFFER_SIZE = 1024;
-    private static final String SERVER_IP = "172.30.49.81";
+    private static final String SERVER_IP = "172.30.66.234";
     private final int port;
     private final DatagramSocket socket;
     private boolean running;
