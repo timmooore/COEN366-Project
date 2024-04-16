@@ -518,7 +518,7 @@ public class Client {
     }
 
     private synchronized static ClientInfo getClientInfo(String fileName) {
-        if (clientInfoHashMap.containsKey(fileName)) {
+        if (clientFiles.containsKey(fileName)) {
             HashSet<String> clientSet = clientFiles.get(fileName);
 
             // Get a random index
