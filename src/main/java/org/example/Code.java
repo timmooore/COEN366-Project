@@ -19,11 +19,7 @@ public enum Code {
     FILE_ERROR(16),
     UPDATE_CONTACT(17),
     UPDATE_CONFIRMED(18),
-   //
-    CONTACT_UPDATE(19),
-    CONTACT_DENIED(20),
-    CONTACT_CONFIRMED(21);
-
+    UPDATE_DENIED(19);
     // Add more message codes as needed
 
     private final int code;

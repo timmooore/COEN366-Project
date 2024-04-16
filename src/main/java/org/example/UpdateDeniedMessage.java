@@ -6,7 +6,7 @@ public class UpdateDeniedMessage extends Message {
     private final String reason;
 
         public UpdateDeniedMessage(int reqNo, String name, String reason) {
-            super(Code.CONTACT_DENIED);
+            super(Code.UPDATE_DENIED);
 
             this.reqNo = reqNo;
             this.name = name;
@@ -16,11 +16,12 @@ public class UpdateDeniedMessage extends Message {
     public int getReqNo() {
         return reqNo;
     }
-        public String getName() {
+
+    public String getName() {
             return name;
         }
 
-        public String getReason() {
+    public String getReason() {
             return reason;
         }
 

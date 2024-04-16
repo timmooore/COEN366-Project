@@ -8,16 +8,18 @@ public class UpdateContactMessage extends Message {
     private final int udpSocket;
 
     public UpdateContactMessage(int reqNo, String name, InetAddress ipAddress, int udpSocket) {
-        super(Code.CONTACT_UPDATE);
+        super(Code.UPDATE_CONTACT);
 
         this.reqNo = reqNo;
         this.name = name;
         this.ipAddress = ipAddress;
         this.udpSocket = udpSocket;
     }
+
     public int getReqNo() {
         return reqNo;
     }
+
     public String getName() {
         return name;
     }

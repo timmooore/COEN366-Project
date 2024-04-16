@@ -132,15 +132,15 @@ public class Server {
                     handleRemove((RemoveMessage) receivedMessage, packet);
                     // TODO: Update clients here on in handlePublish
                     break;
-                case CONTACT_CONFIRMED: {
+                case UPDATE_CONTACT: {
                     handleUpdateConfirmed((UpdateConfirmedMessage) receivedMessage);
                     // Handle UPDATE_CONFIRMED message
                     break;
                 }
-                case CONTACT_DENIED: {
-                    handleUpdateDenied((UpdateDeniedMessage) receivedMessage);
-                    // Handle UPDATE_DENIED message
-                    break;
+//                case CONTACT_DENIED: {
+//                    handleUpdateDenied((UpdateDeniedMessage) receivedMessage);
+//                    // Handle UPDATE_DENIED message
+//                    break;
                 }
                 default: {
                     logger.warning("Received an unrecognized message with code: " + receivedMessage.getCode());
@@ -148,7 +148,9 @@ public class Server {
                 }
             }
         }
-    }private void handleUpdateConfirmed(UpdateConfirmedMessage confirmedMessage) {
+    }
+
+    private void handleUpdateConfirmed(UpdateConfirmedMessage confirmedMessage) {
         logger.info("UPDATE confirmed for client " + confirmedMessage.getName() +
                 ": REQ#: " + confirmedMessage.getReqNo());
     }
