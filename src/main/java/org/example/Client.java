@@ -330,53 +330,63 @@ public class Client {
             return chunks;
         }
 
+
+        // TODO: (Optional) Potentially verify that the RQ# and fileName received match requested
         private void receiveFile(InetAddress hostAddress, int tcpPort) {
-            // TODO: (Optional) Potentially verify that the RQ# and fileName received match requested
             try (Socket clientSocket = new Socket(hostAddress, tcpPort)) {
                 InputStream inputStream = clientSocket.getInputStream();
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 
-                FileReceiver fileReceiver;
+                FileReceiver fileReceiver = null;
                 Message receivedMessage;
-
                 boolean fileConstructed = false;
 
-                // Receive first message to get file name
+                // Receive the first message to initialize fileReceiver
                 receivedMessage = (Message) objectInputStream.readObject();
-                if (receivedMessage.getCode() == Code.FILE) {
-                    FileMessage fileMessage = (FileMessage) receivedMessage;
-                    fileReceiver = new FileReceiver(fileMessage.getFileName());
-                    fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
-                } else if (receivedMessage.getCode() == Code.FILE_END) {
-                    FileEndMessage fileEndMessage = (FileEndMessage) receivedMessage;
-                    fileReceiver = new FileReceiver(fileEndMessage.getFileName());
-                    fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
-                    fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
-                } else {
-                    fileReceiver = null;
+                switch (receivedMessage.getCode()) {
+                    case FILE:
+                        FileMessage fileMessageInit = (FileMessage) receivedMessage;
+                        fileReceiver = new FileReceiver(fileMessageInit.getFileName());
+                        fileConstructed = fileReceiver.addChunk(fileMessageInit.getChunkNo(), fileMessageInit.getText());
+                        break;
+                    case FILE_END:
+                        FileEndMessage fileEndMessageInit = (FileEndMessage) receivedMessage;
+                        fileReceiver = new FileReceiver(fileEndMessageInit.getFileName());
+                        fileReceiver.setNumExpectedChunks(fileEndMessageInit.getChunkNo() + 1);
+                        fileConstructed = fileReceiver.addChunk(fileEndMessageInit.getChunkNo(), fileEndMessageInit.getText());
+                        break;
+                    default:
+                        System.out.println("Received an unknown or inappropriate initial packet, aborting");
+                        return;
                 }
 
-                assert fileReceiver != null;
+                if (fileReceiver == null) {
+                    throw new IllegalStateException("File receiver was not initialized properly.");
+                }
 
                 // Receive the rest of the packets
                 while (!fileConstructed) {
                     receivedMessage = (Message) objectInputStream.readObject();
-                    if (receivedMessage instanceof FileMessage fileMessage) {
-//                        System.out.println("Received fileMessage Object with text: " + fileMessage.getText());
-                        fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
-                    } else if (receivedMessage instanceof FileEndMessage fileEndMessage) {
-//                        System.out.println("Received fileEndMessage Object with text: " + fileEndMessage.getText());
-                        fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
-                        fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
-                    } else {
-                        System.out.println("Received an unknown packet, aborting");
-                        return;
+                    switch (receivedMessage.getCode()) {
+                        case FILE:
+                            FileMessage fileMessage = (FileMessage) receivedMessage;
+                            fileConstructed = fileReceiver.addChunk(fileMessage.getChunkNo(), fileMessage.getText());
+                            break;
+                        case FILE_END:
+                            FileEndMessage fileEndMessage = (FileEndMessage) receivedMessage;
+                            fileReceiver.setNumExpectedChunks(fileEndMessage.getChunkNo() + 1);
+                            fileConstructed = fileReceiver.addChunk(fileEndMessage.getChunkNo(), fileEndMessage.getText());
+                            break;
+                        default:
+                            System.out.println("Received an unknown packet, aborting");
+                            return;
                     }
                 }
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
+
 
         private void handleFileTransfer(FileReqMessage fileReqMessage, DatagramPacket receivedPacket) {
             try (ServerSocket tcpServerSocket = new ServerSocket(0)) {

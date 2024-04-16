@@ -14,7 +14,6 @@ public class Message implements Serializable {
     }
 
 
-
     public byte[] serialize() {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 

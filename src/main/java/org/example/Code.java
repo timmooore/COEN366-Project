@@ -28,6 +28,6 @@ public enum Code {
     }
 
     public int getCode() {
-        return code;
+        return this.code;
     }
 }
