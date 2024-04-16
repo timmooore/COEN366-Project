@@ -604,7 +604,7 @@ public class Client {
                         int newLocalPort = socket.getLocalPort();
 
                         message = new UpdateContactMessage(reqNo++, name, newLocalHost, newLocalPort);
-                        new Thread(new ClientTask(socket, message)).start();
+
                         System.out.println("Contact information updated with IP: " + newLocalHost.getHostAddress() + " and Port: " + newLocalPort);
                         break;
                     case 10:
