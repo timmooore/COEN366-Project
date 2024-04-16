@@ -182,6 +182,7 @@ public class Client {
             this.socket = socket;
         }
 
+
         @Override
         public void run() {
             while (true) {
@@ -266,6 +267,15 @@ public class Client {
                                 + ", TCP Port: " + fcm.getTcpPort());
 
                         executor.submit(() -> receiveFile(receivePacket.getAddress(), fcm.getTcpPort()));
+                        break;
+
+                    case FILE_ERROR:
+                        FileErrorMessage fem = (FileErrorMessage) receivedMessage;
+                        System.out.println("FILE-ERROR received from peer by client "
+                                + Thread.currentThread().getName()
+                                + ": Code: " + fem.getCode()
+                                + ", REQ#: " + fem.getReqNo()
+                                + ", Reason: " + fem.getReason());
                         break;
 
                     case REMOVED:
@@ -622,7 +632,7 @@ public class Client {
                         int newLocalPort = socket.getLocalPort();
 
                         message = new UpdateContactMessage(reqNo++, name, newLocalHost, newLocalPort);
-
+                        new Thread(new ClientTask(socket, message)).start();
                         System.out.println("Contact information updated with IP: " + newLocalHost.getHostAddress() + " and Port: " + newLocalPort);
                         break;
                     case 10:
