@@ -190,6 +190,22 @@ public class Client {
                             + ": Code: " + rdm.getCode()
                             + ", REQ#: " + rdm.getReqNo()
                             + ", Reason: " + rdm.getReason());
+                }else if (receivedMessage.getCode() == Code.REMOVED) {
+                    RemovedMessage rm = (RemovedMessage) receivedMessage;
+                    System.out.println("REMOVED received by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + rm.getCode()
+                            + ", REQ#: " + rm.getReqNo());
+
+                } else if (receivedMessage.getCode() == Code.REMOVE_DENIED) {
+                    RemoveDeniedMessage rdm = (RemoveDeniedMessage) receivedMessage;
+                    System.out.println("REMOVE-DENIED received by client "
+                            + Thread.currentThread().getName()
+                            + ": Code: " + rdm.getCode()
+                            + ", REQ#: " + rdm.getReqNo()
+                            + ", Reason: " + rdm.getReason());
+
+
                 } else if (receivedMessage instanceof PublishedMessage) {
                     System.out.println("PUBLISHED received by client " + Thread.currentThread().getName());
                 } else if (receivedMessage instanceof PublishDeniedMessage deniedMessage) {
